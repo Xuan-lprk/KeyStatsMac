@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string"/>
+              <xsd:attribute name="type" type="xsd:string"/>
+              <xsd:attribute name="mimetype" type="xsd:string"/>
+              <xsd:attribute ref="xml:space"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string"/>
+              <xsd:attribute name="name" type="xsd:string"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1"/>
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3"/>
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4"/>
+              <xsd:attribute ref="xml:space"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required"/>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="App_Name" xml:space="preserve"><value>KeyStats</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Common_Open" xml:space="preserve"><value>打开</value></data>
+  <data name="Common_Import" xml:space="preserve"><value>导入</value></data>
+  <data name="Common_Export" xml:space="preserve"><value>导出</value></data>
+  <data name="Error_AppAlreadyRunning" xml:space="preserve"><value>按键统计已在运行中。</value></data>
+  <data name="Error_StartupFailedFormat" xml:space="preserve"><value>启动错误：{0}</value></data>
+  <data name="Error_AppErrorTitle" xml:space="preserve"><value>按键统计错误</value></data>
+  <data name="Error_ImportInvalidFormat" xml:space="preserve"><value>数据格式无效。</value></data>
+  <data name="Error_ImportUnsupportedVersion" xml:space="preserve"><value>不支持的导出版本。</value></data>
+  <data name="Error_ImportEmpty" xml:space="preserve"><value>所选文件为空。</value></data>
+
+  <data name="Notif_ThresholdTitle" xml:space="preserve"><value>统计提醒</value></data>
+  <data name="Notif_KeyThresholdReachedFormat" xml:space="preserve"><value>今日按键数已达到 {0:N0} 次</value></data>
+  <data name="Notif_ClickThresholdReachedFormat" xml:space="preserve"><value>今日点击数已达到 {0:N0} 次</value></data>
+
+  <data name="Tray_OpenMainWindow" xml:space="preserve"><value>打开主界面</value></data>
+  <data name="Tray_ShowFloatingStats" xml:space="preserve"><value>显示今日统计浮窗</value></data>
+  <data name="Tray_Settings" xml:space="preserve"><value>设置</value></data>
+  <data name="Tray_StartAtLogin" xml:space="preserve"><value>开机启动</value></data>
+  <data name="Tray_KeyHistory" xml:space="preserve"><value>历史按键统计</value></data>
+  <data name="Tray_Quit" xml:space="preserve"><value>退出</value></data>
+
+  <data name="FloatingStats_WindowTitle" xml:space="preserve"><value>今日统计 - KeyStats</value></data>
+  <data name="FloatingStats_Today" xml:space="preserve"><value>今日</value></data>
+  <data name="FloatingStats_PrimaryMetric" xml:space="preserve"><value>第一项</value></data>
+  <data name="FloatingStats_SecondaryMetric" xml:space="preserve"><value>第二项</value></data>
+  <data name="FloatingStats_Layout" xml:space="preserve"><value>展示方式</value></data>
+  <data name="FloatingStats_FontSize" xml:space="preserve"><value>字体大小</value></data>
+  <data name="FloatingStats_SingleRow" xml:space="preserve"><value>一排</value></data>
+  <data name="FloatingStats_DoubleRow" xml:space="preserve"><value>两排</value></data>
+  <data name="FloatingStats_AlwaysOnTop" xml:space="preserve"><value>始终置顶</value></data>
+  <data name="FloatingStats_LockPosition" xml:space="preserve"><value>锁定位置</value></data>
+  <data name="FloatingStats_OpenDetails" xml:space="preserve"><value>打开详细统计</value></data>
+  <data name="FloatingStats_Hide" xml:space="preserve"><value>隐藏浮窗</value></data>
+  <data name="Settings_FloatingStats" xml:space="preserve"><value>统计浮窗</value></data>
+  <data name="Settings_FloatingStatsDesc" xml:space="preserve"><value>选择桌面浮窗显示的两项统计，并调整浮窗行为。</value></data>
+
+  <data name="Toast_ExportSuccess_Title" xml:space="preserve"><value>导出成功</value></data>
+  <data name="Toast_ExportSuccess_BodyFormat" xml:space="preserve"><value>数据已保存到 {0}</value></data>
+  <data name="Toast_ExportFailed_Title" xml:space="preserve"><value>导出失败</value></data>
+  <data name="Toast_ExportFailed_BodyFormat" xml:space="preserve"><value>无法导出数据：{0}</value></data>
+  <data name="Toast_ImportSuccess_Title" xml:space="preserve"><value>导入成功</value></data>
+  <data name="Toast_ImportSuccess_BodyFormat" xml:space="preserve"><value>已{0}导入统计数据：{1}</value></data>
+  <data name="Toast_ImportFailed_Title" xml:space="preserve"><value>导入失败</value></data>
+  <data name="Toast_ImportFailed_BodyFormat" xml:space="preserve"><value>无法导入数据：{0}</value></data>
+  <data name="ImportMode_Overwrite" xml:space="preserve"><value>覆盖</value></data>
+  <data name="ImportMode_Merge" xml:space="preserve"><value>合并</value></data>
+
+  <data name="Shortcut_Description" xml:space="preserve"><value>按键统计</value></data>
+
+  <data name="Dialog_ExportTitle" xml:space="preserve"><value>导出数据</value></data>
+  <data name="Dialog_ImportTitle" xml:space="preserve"><value>导入数据</value></data>
+  <data name="Dialog_JsonFilter" xml:space="preserve"><value>JSON 文件 (*.json)|*.json|所有文件 (*.*)|*.*</value></data>
+
+  <data name="Settings_Language" xml:space="preserve"><value>语言</value></data>
+  <data name="Settings_LanguageDescription" xml:space="preserve"><value>应用界面显示语言</value></data>
+  <data name="Settings_Language_System" xml:space="preserve"><value>跟随系统</value></data>
+  <data name="Language_RestartPromptTitle" xml:space="preserve"><value>需要重启</value></data>
+  <data name="Language_RestartPromptMessage" xml:space="preserve"><value>需要重启 KeyStats 才能切换语言。是否立即重启？</value></data>
+
+  <data name="Settings_WindowTitle" xml:space="preserve"><value>设置 - KeyStats</value></data>
+  <data name="Settings_HeaderTitle" xml:space="preserve"><value>设置</value></data>
+  <data name="Settings_HeaderSubtitle" xml:space="preserve"><value>在这里管理导入导出与通知设置</value></data>
+  <data name="Settings_GitHubTooltip" xml:space="preserve"><value>打开 GitHub 仓库</value></data>
+  <data name="Settings_DataImportExport" xml:space="preserve"><value>数据导入 / 导出</value></data>
+  <data name="Settings_DataImportExportDesc" xml:space="preserve"><value>以 JSON 导入或导出这台设备的本机统计</value></data>
+  <data name="Settings_Notifications" xml:space="preserve"><value>通知设置</value></data>
+  <data name="Settings_NotificationsDesc" xml:space="preserve"><value>设置按键/点击阈值通知</value></data>
+  <data name="Settings_DistanceCalibration" xml:space="preserve"><value>距离校准</value></data>
+  <data name="Settings_DistanceCalibrationDesc" xml:space="preserve"><value>校准鼠标移动距离系数</value></data>
+  <data name="Settings_VersionFormat" xml:space="preserve"><value>当前版本 {0}</value></data>
+  <data name="Settings_OpenGitHubFailedMessage" xml:space="preserve"><value>无法打开 GitHub 页面。</value></data>
+
+  <data name="Stats_TodayHeader" xml:space="preserve"><value>今日统计</value></data>
+  <data name="Stats_KeyPresses" xml:space="preserve"><value>按键次数</value></data>
+  <data name="Stats_MouseClicks" xml:space="preserve"><value>鼠标点击</value></data>
+  <data name="Stats_MouseClickDetail" xml:space="preserve"><value>鼠标点击明细</value></data>
+  <data name="Click_Left" xml:space="preserve"><value>左键</value></data>
+  <data name="Click_Middle" xml:space="preserve"><value>中键</value></data>
+  <data name="Click_Right" xml:space="preserve"><value>右键</value></data>
+  <data name="Click_Back" xml:space="preserve"><value>后退</value></data>
+  <data name="Click_Forward" xml:space="preserve"><value>前进</value></data>
+  <data name="Stats_MouseDistance" xml:space="preserve"><value>鼠标移动</value></data>
+  <data name="Stats_ScrollDistance" xml:space="preserve"><value>滚轮滚动</value></data>
+  <data name="Stats_KeyBreakdown" xml:space="preserve"><value>按键分布</value></data>
+  <data name="KeyBreakdown_Empty" xml:space="preserve"><value>暂无按键记录</value></data>
+  <data name="Stats_KeyboardHeatmap" xml:space="preserve"><value>键盘热力图</value></data>
+  <data name="Stats_KeyHistory" xml:space="preserve"><value>历史按键统计</value></data>
+  <data name="Stats_ActiveApps" xml:space="preserve"><value>活跃应用</value></data>
+  <data name="Stats_AppStatsDetail" xml:space="preserve"><value>应用统计详情</value></data>
+  <data name="Stats_HistoryHeader" xml:space="preserve"><value>历史记录</value></data>
+  <data name="Chart_Line" xml:space="preserve"><value>折线</value></data>
+  <data name="Chart_Bar" xml:space="preserve"><value>柱状</value></data>
+  <data name="Range_7Days" xml:space="preserve"><value>7天</value></data>
+  <data name="Range_30Days" xml:space="preserve"><value>30天</value></data>
+  <data name="Metric_Clicks" xml:space="preserve"><value>点击</value></data>
+  <data name="Metric_Keys" xml:space="preserve"><value>按键</value></data>
+  <data name="Metric_Move" xml:space="preserve"><value>移动</value></data>
+  <data name="Metric_Scroll" xml:space="preserve"><value>滚动</value></data>
+  <data name="Stats_PeakKpsTooltipLabel" xml:space="preserve"><value>峰值按键速度(KPS)</value></data>
+  <data name="Stats_PeakCpsTooltipLabel" xml:space="preserve"><value>峰值点击速度(CPS)</value></data>
+
+  <data name="AppStats_WindowTitle" xml:space="preserve"><value>按应用统计</value></data>
+  <data name="AppStats_HeaderTitle" xml:space="preserve"><value>按应用统计</value></data>
+  <data name="AppStats_HeaderSubtitle" xml:space="preserve"><value>按应用统计键盘/点击/滚动，仅保存聚合数据</value></data>
+  <data name="AppStats_RangeToday" xml:space="preserve"><value>今天</value></data>
+  <data name="AppStats_Range7Days" xml:space="preserve"><value>过去7天</value></data>
+  <data name="AppStats_Range30Days" xml:space="preserve"><value>过去30天</value></data>
+  <data name="AppStats_RangeAll" xml:space="preserve"><value>全部</value></data>
+  <data name="AppStats_ColumnApp" xml:space="preserve"><value>应用</value></data>
+  <data name="AppStats_ColumnKeys" xml:space="preserve"><value>键盘</value></data>
+  <data name="AppStats_ColumnClicks" xml:space="preserve"><value>点击</value></data>
+  <data name="AppStats_ColumnScroll" xml:space="preserve"><value>滚轮</value></data>
+  <data name="AppStats_SummaryFormat" xml:space="preserve"><value>总计: {0} 键盘 | {1} 点击 | {2} 滚动</value></data>
+  <data name="AppStats_Empty" xml:space="preserve"><value>暂无应用数据</value></data>
+  <data name="AppStats_UnknownApp" xml:space="preserve"><value>未知应用</value></data>
+  <data name="History_TotalFormat" xml:space="preserve"><value>总计: {0}</value></data>
+  <data name="History_SeriesSynced" xml:space="preserve"><value>同步汇总</value></data>
+  <data name="KeyHistory_Empty" xml:space="preserve"><value>暂无历史按键数据</value></data>
+  <data name="KeyHistory_SummaryFormat" xml:space="preserve"><value>总按键: {0} · 按键种类: {1}</value></data>
+  <data name="PieChart_Empty" xml:space="preserve"><value>暂无数据</value></data>
+  <data name="PieChart_CountFormat" xml:space="preserve"><value>次数: {0}</value></data>
+  <data name="PieChart_PercentFormat" xml:space="preserve"><value>比例: {0}</value></data>
+
+  <data name="Heatmap_WindowTitle" xml:space="preserve"><value>键盘热力图</value></data>
+  <data name="Heatmap_HeaderTitle" xml:space="preserve"><value>键盘热力图</value></data>
+  <data name="Heatmap_HeaderSubtitle" xml:space="preserve"><value>完整虚拟键盘视图，按天展示按键热度。</value></data>
+  <data name="Heatmap_PrevDay" xml:space="preserve"><value>上一天</value></data>
+  <data name="Heatmap_NextDay" xml:space="preserve"><value>下一天</value></data>
+  <data name="Heatmap_BackToToday" xml:space="preserve"><value>回到今天</value></data>
+  <data name="Heatmap_NoData" xml:space="preserve"><value>当天暂无键盘活动</value></data>
+  <data name="Heatmap_SummaryFormat" xml:space="preserve"><value>总计 {0} 次按键 · {1} 个活跃键</value></data>
+  <data name="Heatmap_DatePickerTooltip" xml:space="preserve"><value>选择日期</value></data>
+
+  <data name="KeyHistory_WindowTitle" xml:space="preserve"><value>历史按键统计</value></data>
+  <data name="KeyHistory_HeaderTitle" xml:space="preserve"><value>历史按键统计</value></data>
+  <data name="KeyHistory_HeaderSubtitle" xml:space="preserve"><value>按键数量聚合统计，仅展示计数，不记录输入内容</value></data>
+  <data name="KeyHistory_PieChartTitle" xml:space="preserve"><value>按键占比（饼图）</value></data>
+  <data name="KeyHistory_BarChartTitle" xml:space="preserve"><value>按键次数（柱状图）</value></data>
+  <data name="History_Range_Today" xml:space="preserve"><value>今天</value></data>
+  <data name="History_Range_Last7Days" xml:space="preserve"><value>过去7天</value></data>
+  <data name="History_Range_Last30Days" xml:space="preserve"><value>过去30天</value></data>
+  <data name="History_Range_All" xml:space="preserve"><value>全部</value></data>
+
+  <data name="Calibration_WindowTitle" xml:space="preserve"><value>鼠标距离校准</value></data>
+  <data name="Calibration_HeaderTitle" xml:space="preserve"><value>鼠标距离校准</value></data>
+  <data name="Calibration_Start" xml:space="preserve"><value>开始</value></data>
+  <data name="Calibration_Finish" xml:space="preserve"><value>完成</value></data>
+
+  <data name="Calibration_InstructionEnter" xml:space="preserve"><value>按回车开始记录，再按回车结束记录并计算距离系数</value></data>
+  <data name="Calibration_LengthLabel" xml:space="preserve"><value>标尺长度</value></data>
+  <data name="Calibration_StepsLabel" xml:space="preserve"><value>校准步骤</value></data>
+  <data name="Calibration_StatusIdle" xml:space="preserve"><value>未开始，按回车开始</value></data>
+  <data name="Calibration_StatusRecording" xml:space="preserve"><value>已开始，移动标尺长度后按回车结束</value></data>
+  <data name="Calibration_StatusPressEnterFirst" xml:space="preserve"><value>请先按回车开始</value></data>
+  <data name="Calibration_StatusMovementTooShort" xml:space="preserve"><value>移动距离过短，请重新校准</value></data>
+  <data name="Calibration_StatusInvalidLength" xml:space="preserve"><value>标尺长度无效</value></data>
+  <data name="Calibration_StatusComplete" xml:space="preserve"><value>校准完成</value></data>
+  <data name="Calibration_DisplayUnitLabel" xml:space="preserve"><value>显示单位</value></data>
+  <data name="Calibration_UnitAuto" xml:space="preserve"><value>自动 (cm/m/km)</value></data>
+  <data name="Calibration_UnitPixel" xml:space="preserve"><value>像素 (px)</value></data>
+  <data name="Calibration_CurrentResultLabel" xml:space="preserve"><value>当前结果</value></data>
+  <data name="Calibration_PixelsLabelEmpty" xml:space="preserve"><value>像素距离: --</value></data>
+  <data name="Calibration_PixelsLabelFormat" xml:space="preserve"><value>像素距离: {0:F0} px</value></data>
+  <data name="Calibration_ScaleLabelEmpty" xml:space="preserve"><value>换算系数: --</value></data>
+  <data name="Calibration_ScaleLabelFormat" xml:space="preserve"><value>换算系数: {0:E4} m/px</value></data>
+  <data name="Calibration_TipFooter" xml:space="preserve"><value>提示：如需更准确，请关闭系统鼠标加速并保持匀速移动。</value></data>
+
+  <!-- NotificationSettingsWindow -->
+  <data name="NotifSettings_WindowTitle" xml:space="preserve"><value>通知设置 - KeyStats</value></data>
+  <data name="NotifSettings_HeaderTitle" xml:space="preserve"><value>通知设置</value></data>
+  <data name="NotifSettings_HeaderSubtitle" xml:space="preserve"><value>当按键或点击次数每达到设定值时发送通知</value></data>
+  <data name="NotifSettings_Enable" xml:space="preserve"><value>启用通知</value></data>
+  <data name="NotifSettings_KeyCardTitle" xml:space="preserve"><value>按键次数通知</value></data>
+  <data name="NotifSettings_ClickCardTitle" xml:space="preserve"><value>鼠标点击通知</value></data>
+  <data name="NotifSettings_EveryFormat" xml:space="preserve"><value>每 {0} 次通知一次</value></data>
+  <data name="NotifSettings_Hint" xml:space="preserve"><value>例如：设为 1000，则在 1000、2000、3000… 次时通知。</value></data>
+
+  <!-- ImportModeDialog -->
+  <data name="ImportDialog_HeaderTitle" xml:space="preserve"><value>选择导入方式</value></data>
+  <data name="ImportDialog_Description" xml:space="preserve"><value>请选择如何处理导入的数据：</value></data>
+  <data name="ImportDialog_OverwriteDesc" xml:space="preserve"><value>删除现有数据，使用导入的数据替换</value></data>
+  <data name="ImportDialog_MergeDesc" xml:space="preserve"><value>保留现有数据，将导入的数据累加合并</value></data>
+
+  <!-- ConfirmDialog -->
+  <data name="Confirm_DefaultHeaderTitle" xml:space="preserve"><value>确认操作</value></data>
+  <data name="Confirm_DefaultMessage" xml:space="preserve"><value>确定要执行此操作吗？</value></data>
+  <data name="Confirm_DefaultTitle" xml:space="preserve"><value>确认</value></data>
+  <data name="Confirm_DefaultConfirm" xml:space="preserve"><value>确定</value></data>
+  <data name="Error_ImportDisabledWhileSyncing" xml:space="preserve"><value>设备同步开启时不能导入数据。请先退出同步；导出始终只包含本机数据。</value></data>
+  <data name="Settings_Sync" xml:space="preserve"><value>设备同步</value></data>
+  <data name="Settings_SyncDesc" xml:space="preserve"><value>端到端加密同步核心按键和点击总数</value></data>
+  <data name="Settings_SyncUnavailable" xml:space="preserve"><value>此版本尚未配置同步服务</value></data>
+  <data name="Sync_WindowTitle" xml:space="preserve"><value>设备同步 - KeyStats</value></data>
+  <data name="Sync_HeaderTitle" xml:space="preserve"><value>设备同步</value></data>
+  <data name="Sync_HeaderSubtitle" xml:space="preserve"><value>核心按键和点击总数会先在本机加密再上传。应用统计、距离和峰值仅保留在本机。</value></data>
+  <data name="Sync_ServiceUnavailable" xml:space="preserve"><value>此版本没有配置同步服务地址，不会发出任何网络请求。</value></data>
+  <data name="Sync_CreateTitle" xml:space="preserve"><value>从这台设备开始</value></data>
+  <data name="Sync_CreateDescription" xml:space="preserve"><value>创建加密资料库并首次上传加密历史。设置完成后，连接第二台设备前不会进行普通同步，也不能手动同步。</value></data>
+  <data name="Sync_CreateButton" xml:space="preserve"><value>创建资料库</value></data>
+  <data name="Sync_JoinTitle" xml:space="preserve"><value>添加这台设备</value></data>
+  <data name="Sync_JoinDescription" xml:space="preserve"><value>生成六位验证码，然后在已连接的设备上批准。</value></data>
+  <data name="Sync_BeginPairingButton" xml:space="preserve"><value>生成验证码</value></data>
+  <data name="Sync_CompletePairingButton" xml:space="preserve"><value>完成配对</value></data>
+  <data name="Sync_RecoverTitle" xml:space="preserve"><value>使用恢复码</value></data>
+  <data name="Sync_RecoverDescription" xml:space="preserve"><value>其他设备不可用时，可用 28 位恢复码添加这台设备。</value></data>
+  <data name="Sync_RecoverButton" xml:space="preserve"><value>恢复</value></data>
+  <data name="Sync_StatusTitle" xml:space="preserve"><value>同步状态</value></data>
+  <data name="Sync_NowButton" xml:space="preserve"><value>立即同步</value></data>
+  <data name="Sync_InProgressStatus" xml:space="preserve"><value>正在同步加密数据…</value></data>
+  <data name="Sync_ProgressFormat" xml:space="preserve"><value>已同步 {0} / {1} 天，本地统计会继续正常工作。</value></data>
+  <data name="Sync_StatusServiceNotConfigured" xml:space="preserve"><value>同步服务尚未配置</value></data>
+  <data name="Sync_StatusServiceNotConfiguredDetail" xml:space="preserve"><value>当前构建未写入生产 workers.dev 地址，本地统计不受影响。</value></data>
+  <data name="Sync_StatusNeedsRepair" xml:space="preserve"><value>需要重新配对</value></data>
+  <data name="Sync_StatusNeedsRepairDetail" xml:space="preserve"><value>本地统计仍然安全。请使用恢复码或重新配对本设备。</value></data>
+  <data name="Sync_StatusSyncingDetail" xml:space="preserve"><value>同步期间本地统计会继续正常工作。</value></data>
+  <data name="Sync_StatusFailed" xml:space="preserve"><value>同步失败</value></data>
+  <data name="Sync_StatusOff" xml:space="preserve"><value>同步未启用</value></data>
+  <data name="Sync_StatusOffDetail" xml:space="preserve"><value>可以创建同步组、恢复同步组或配对本设备。只有一台设备时不会发起普通同步请求。</value></data>
+  <data name="Sync_StatusSingleDevice" xml:space="preserve"><value>只有一台设备，无需同步</value></data>
+  <data name="Sync_StatusSingleDeviceDetail" xml:space="preserve"><value>添加另一台设备后才会启用手动和每日同步。</value></data>
+  <data name="Sync_StatusOn" xml:space="preserve"><value>设备同步已开启</value></data>
+  <data name="Sync_StatusLastSyncFormat" xml:space="preserve"><value>上次同步于 {0}</value></data>
+  <data name="Sync_StatusNotYetSynced" xml:space="preserve"><value>尚未同步</value></data>
+  <data name="Sync_CooldownFormat" xml:space="preserve"><value>{0} 分钟</value></data>
+  <data name="Sync_BootstrapPendingStatus" xml:space="preserve"><value>首次加密历史上传尚未完成。</value></data>
+  <data name="Sync_RetryBootstrapButton" xml:space="preserve"><value>重试设置</value></data>
+  <data name="Sync_RepairRequired" xml:space="preserve"><value>无法安全读取本机同步配置，已禁止创建新的资料库。请使用恢复码或重新配对，也可以只清除本机同步配置。本机统计不会改变。</value></data>
+  <data name="Sync_ClearRepairButton" xml:space="preserve"><value>清除本机同步配置</value></data>
+  <data name="Sync_ClearRepairConfirm" xml:space="preserve"><value>要清除这台电脑上损坏或未完成的同步配置和加密凭证吗？本机统计不会删除，云端数据也不会被删除。</value></data>
+  <data name="Sync_RecoveryReplaceTitle" xml:space="preserve"><value>替换一台已连接设备</value></data>
+  <data name="Sync_RecoveryReplaceMessage" xml:space="preserve"><value>此资料库已有五台设备。请选择要接管的一台设备身份。该设备的令牌会被撤销，但其加密历史仍会保留。</value></data>
+  <data name="Sync_RecoveryReplaceConfirm" xml:space="preserve"><value>替换设备</value></data>
+  <data name="Sync_ApproveTitle" xml:space="preserve"><value>批准另一台设备</value></data>
+  <data name="Sync_ApproveDescription" xml:space="preserve"><value>输入新设备上的六位验证码，然后核对两台设备的安全码。</value></data>
+  <data name="Sync_ApproveButton" xml:space="preserve"><value>核对</value></data>
+  <data name="Sync_RecoveryCodeTitle" xml:space="preserve"><value>恢复码</value></data>
+  <data name="Sync_RecoveryCodeWarning" xml:space="preserve"><value>任何拿到恢复码的人都能恢复资料库。请离线保存，也不要发给客服。</value></data>
+  <data name="Sync_ShowRecoveryCodeButton" xml:space="preserve"><value>显示恢复码</value></data>
+  <data name="Sync_LeaveButton" xml:space="preserve"><value>从同步中移除这台设备</value></data>
+  <data name="Sync_LeaveConfirm" xml:space="preserve"><value>要从加密资料库中移除这台设备吗？本机统计不会被删除。</value></data>
+  <data name="Sync_DeleteVaultButton" xml:space="preserve"><value>删除全部云端同步数据</value></data>
+  <data name="Sync_DeleteVaultConfirm" xml:space="preserve"><value>要永久删除所有设备的加密资料库吗？所有设备会立即失去访问权限，本机统计仍会保留。</value></data>
+  <data name="Sync_SingleDeviceStatus" xml:space="preserve"><value>当前只有一台设备，不上传统计，也不能手动同步。</value></data>
+  <data name="Sync_DeviceCountFormat" xml:space="preserve"><value>已连接 {0} 台设备</value></data>
+  <data name="Sync_LastSuccessFormat" xml:space="preserve"><value>上次成功同步：{0}</value></data>
+  <data name="Sync_NeverSynced" xml:space="preserve"><value>尚未成功同步</value></data>
+  <data name="Sync_DevicesTitle" xml:space="preserve"><value>已连接设备</value></data>
+  <data name="Sync_ThisDevice" xml:space="preserve"><value>这台设备</value></data>
+  <data name="Sync_RevokeButton" xml:space="preserve"><value>移除</value></data>
+  <data name="Sync_RevokeConfirmFormat" xml:space="preserve"><value>要从加密资料库中移除 {0} 吗？</value></data>
+  <data name="Sync_SafetyCodeTitle" xml:space="preserve"><value>核对安全码</value></data>
+  <data name="Sync_SafetyCodeConfirmFormat" xml:space="preserve"><value>请确认两台设备都显示此安全码：{0}</value></data>
+  <data name="Sync_ApprovalComplete" xml:space="preserve"><value>设备已批准，请在新设备上完成配对。</value></data>
+  <data name="Sync_GenericError" xml:space="preserve"><value>同步未完成，请检查网络后重试。</value></data>
+</root>

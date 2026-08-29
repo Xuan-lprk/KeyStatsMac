@@ -1,0 +1,39 @@
+<UserControl x:Class="KeyStats.Views.Controls.StatItemControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Icon -->
+        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                Background="{DynamicResource SubtleFillBrush}"
+                CornerRadius="5" Width="28" Height="28"
+                VerticalAlignment="Center" Margin="0,0,8,0">
+            <TextBlock x:Name="IconText"
+                       FontFamily="Segoe MDL2 Assets"
+                        FontSize="13"
+                        Foreground="{DynamicResource AccentBrush}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- Title -->
+        <TextBlock x:Name="TitleText" Grid.Row="0" Grid.Column="1"
+                   FontSize="10"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   VerticalAlignment="Bottom"/>
+
+        <!-- Value -->
+        <TextBlock x:Name="ValueText" Grid.Row="1" Grid.Column="1"
+                   FontSize="15" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   VerticalAlignment="Top" Margin="0,0,0,0"/>
+    </Grid>
+</UserControl>

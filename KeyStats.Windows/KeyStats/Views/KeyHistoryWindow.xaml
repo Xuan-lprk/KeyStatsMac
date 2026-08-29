@@ -1,0 +1,235 @@
+﻿<Window x:Class="KeyStats.Views.KeyHistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:KeyStats.Views.Controls"
+        xmlns:viewmodels="clr-namespace:KeyStats.ViewModels"
+        xmlns:p="clr-namespace:KeyStats.Properties"
+        Title="{x:Static p:Strings.KeyHistory_WindowTitle}"
+        Width="860"
+        Height="620"
+        MinWidth="760"
+        MinHeight="520"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowSurfaceBrush}"
+        ShowInTaskbar="True">
+
+    <Window.DataContext>
+        <viewmodels:KeyHistoryViewModel/>
+    </Window.DataContext>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="{x:Static p:Strings.KeyHistory_HeaderTitle}"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="{x:Static p:Strings.KeyHistory_HeaderSubtitle}"
+                       Margin="0,4,0,0"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="{DynamicResource SubtleFillBrush}" CornerRadius="6" Padding="3" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton Content="{x:Static p:Strings.History_Range_Today}" GroupName="KeyHistoryRange"
+                             Style="{DynamicResource SegmentedButton}" FontSize="11" Padding="10,4"
+                             IsChecked="{Binding SelectedRangeIndex, Converter={StaticResource IntToBoolConverter}, ConverterParameter=0}"/>
+                <RadioButton Content="{x:Static p:Strings.History_Range_Last7Days}" GroupName="KeyHistoryRange"
+                             Style="{DynamicResource SegmentedButton}" FontSize="11" Padding="10,4"
+                             IsChecked="{Binding SelectedRangeIndex, Converter={StaticResource IntToBoolConverter}, ConverterParameter=1}"/>
+                <RadioButton Content="{x:Static p:Strings.History_Range_Last30Days}" GroupName="KeyHistoryRange"
+                             Style="{DynamicResource SegmentedButton}" FontSize="11" Padding="10,4"
+                             IsChecked="{Binding SelectedRangeIndex, Converter={StaticResource IntToBoolConverter}, ConverterParameter=2}"/>
+                <RadioButton Content="{x:Static p:Strings.History_Range_All}" GroupName="KeyHistoryRange"
+                             Style="{DynamicResource SegmentedButton}" FontSize="11" Padding="10,4"
+                             IsChecked="{Binding SelectedRangeIndex, Converter={StaticResource IntToBoolConverter}, ConverterParameter=3}"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Grid.Row="2"
+                   Text="{Binding SummaryText}"
+                   Style="{DynamicResource SecondaryText}"
+                   Margin="0,0,0,10"
+                   Visibility="{Binding HasData, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+        <Grid Grid.Row="3">
+            <TextBlock Text="{Binding EmptyText}"
+                       FontSize="13"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <Grid Visibility="{Binding HasData, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="3*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{DynamicResource CardBorder}" Padding="12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0"
+                                   Text="{x:Static p:Strings.KeyHistory_PieChartTitle}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   Margin="0,0,0,8"/>
+
+                        <controls:KeyDistributionPieChartControl Grid.Row="1"
+                                                                  ItemsSource="{Binding PieChartItems}"
+                                                                  MinHeight="180"/>
+
+                        <ScrollViewer Grid.Row="2"
+                                      Margin="0,8,0,0"
+                                      MaxHeight="120"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding PieChartItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0"
+                                                    Width="10"
+                                                    Height="10"
+                                                    Margin="0,0,6,0"
+                                                    CornerRadius="2"
+                                                    Background="{Binding Brush}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Key}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding PercentageText}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Margin="8,0,0,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="2" Style="{DynamicResource CardBorder}" Padding="12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0"
+                                   Text="{x:Static p:Strings.KeyHistory_BarChartTitle}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   Margin="0,0,0,8"/>
+
+                        <ListBox Grid.Row="1"
+                                 ItemsSource="{Binding BarChartItems}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Grid.IsSharedSizeScope="True"
+                                 Padding="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Focusable" Value="False"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <ContentPresenter/>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120" SharedSizeGroup="KeyColumn"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="CountColumn"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PercentColumn"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding Key}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="0,0,8,0"/>
+
+                                        <Border Grid.Column="1"
+                                                x:Name="BarTrack"
+                                                Height="16"
+                                                Background="{DynamicResource SubtleFillBrush}"
+                                                CornerRadius="3"
+                                                VerticalAlignment="Center">
+                                            <Border>
+                                                <Border.Width>
+                                                    <MultiBinding Converter="{StaticResource BarWidthConverter}">
+                                                        <Binding Path="Ratio"/>
+                                                        <Binding ElementName="BarTrack" Path="ActualWidth"/>
+                                                    </MultiBinding>
+                                                </Border.Width>
+                                                <Border.HorizontalAlignment>Left</Border.HorizontalAlignment>
+                                                <Border.Background>
+                                                    <Binding Path="Brush"/>
+                                                </Border.Background>
+                                                <Border.CornerRadius>3</Border.CornerRadius>
+                                            </Border>
+                                        </Border>
+
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding CountText}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8,0,0,0"/>
+
+                                        <TextBlock Grid.Column="3"
+                                                   Text="{Binding PercentageText}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8,0,0,0"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
+

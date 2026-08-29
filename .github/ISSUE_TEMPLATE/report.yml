@@ -1,0 +1,40 @@
+name: Bug / Question Report
+description: Report a bug or ask a question
+title: "[Report]: "
+labels: ["needs-triage"]
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Affected Platform
+      options:
+        - macOS
+        - Windows
+    validations:
+      required: true
+
+  - type: dropdown
+    id: report_type
+    attributes:
+      label: Report Type
+      options:
+        - Bug
+        - Question
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App Version
+      placeholder: e.g. v1.43
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: What happened? What did you expect?
+    validations:
+      required: true

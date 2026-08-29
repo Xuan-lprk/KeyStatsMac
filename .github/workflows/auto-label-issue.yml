@@ -1,0 +1,142 @@
+name: Auto Label Issues
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  apply-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply labels from issue form
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body || "";
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.issue.number;
+
+            const escapeRegExp = (value) =>
+              value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+            const getSectionValue = (title) => {
+              const pattern = `###\\s*${escapeRegExp(title)}\\s*\\n+([\\s\\S]*?)(?=\\n###\\s|$)`;
+              const match = body.match(new RegExp(pattern, "i"));
+              if (!match) return "";
+              return match[1].trim().split("\n")[0].trim();
+            };
+
+            const labelMap = {
+              platform: {
+                title: "Affected Platform",
+                values: {
+                  macos: "macOS",
+                  windows: "Windows"
+                }
+              },
+              reportType: {
+                title: "Report Type",
+                values: {
+                  bug: "bug",
+                  question: "question"
+                }
+              }
+            };
+
+            const toKey = (value) => value.toLowerCase().trim();
+
+            const desiredLabels = [];
+            const platformValue = toKey(getSectionValue(labelMap.platform.title));
+            const reportValue = toKey(getSectionValue(labelMap.reportType.title));
+
+            if (labelMap.platform.values[platformValue]) {
+              desiredLabels.push(labelMap.platform.values[platformValue]);
+            }
+            if (labelMap.reportType.values[reportValue]) {
+              desiredLabels.push(labelMap.reportType.values[reportValue]);
+            }
+
+            if (!desiredLabels.length) {
+              console.info("No matching labels found from issue form.");
+              return;
+            }
+
+            const labelColors = {
+              macos: "0E8A16",
+              windows: "1D76DB",
+              bug: "D73A4A",
+              question: "D876E3"
+            };
+
+            const existingLabels = await github.paginate(
+              github.rest.issues.listLabelsForRepo,
+              { owner, repo, per_page: 100 }
+            );
+            const existingNames = new Set(
+              existingLabels.map((l) => l.name.toLowerCase())
+            );
+
+            for (const name of desiredLabels) {
+              if (!existingNames.has(name.toLowerCase())) {
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name,
+                    color: labelColors[name] || "BFDADC",
+                    description: "Auto-applied from issue form"
+                  });
+                } catch (error) {
+                  if (
+                    error?.status === 422 &&
+                    error?.message?.includes("already_exists")
+                  ) {
+                    console.info(`Label already exists: ${name}`);
+                    continue;
+                  }
+                  throw error;
+                }
+              }
+            }
+
+            const issueLabels = await github.paginate(
+              github.rest.issues.listLabelsOnIssue,
+              { owner, repo, issue_number: issueNumber, per_page: 100 }
+            );
+            const issueLabelNames = issueLabels.map((l) => l.name);
+
+            const platformLabelSet = new Set(Object.values(labelMap.platform.values));
+            const reportLabelSet = new Set(Object.values(labelMap.reportType.values));
+
+            const labelsToRemove = issueLabelNames.filter((name) => {
+              if (platformLabelSet.has(name)) {
+                return !desiredLabels.includes(name);
+              }
+              if (reportLabelSet.has(name)) {
+                return !desiredLabels.includes(name);
+              }
+              return false;
+            });
+
+            if (labelsToRemove.length) {
+              for (const name of labelsToRemove) {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  name
+                });
+              }
+            }
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              labels: desiredLabels
+            });

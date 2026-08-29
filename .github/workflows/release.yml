@@ -1,0 +1,319 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # ============================================================
+  # macOS Build
+  # ============================================================
+  build-macos:
+    runs-on: macos-26
+    env:
+      KEYSTATS_SYNC_SERVICE_URL: ${{ vars.KEYSTATS_SYNC_PRODUCTION_URL }}
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+      sha256: ${{ steps.sha256.outputs.SHA256 }}
+
+    steps:
+      - name: Check build environment
+        run: |
+          sw_vers
+          xcodebuild -version
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update app version
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = $VERSION;/" KeyStats.xcodeproj/project.pbxproj
+          echo "Updated MARKETING_VERSION to $VERSION"
+
+      - name: Override SUFeedURL for beta channel
+        if: contains(github.ref_name, '-beta')
+        run: |
+          BETA_FEED="https://github.com/${{ github.repository }}/releases/download/beta-channel/appcast.xml"
+          sed -i '' "s|<string>https://github.com/[^<]*appcast.xml</string>|<string>$BETA_FEED</string>|" KeyStats/Info.plist
+          echo "Beta SUFeedURL set to: $BETA_FEED"
+          grep -A1 SUFeedURL KeyStats/Info.plist
+
+      - name: Verify vendored helper
+        run: ./scripts/check_vendored_helper.sh
+
+      - name: Build DMG
+        run: |
+          if [[ ! "$KEYSTATS_SYNC_SERVICE_URL" =~ ^https://[A-Za-z0-9.-]+\.workers\.dev/?$ ]]; then
+            echo "KEYSTATS_SYNC_PRODUCTION_URL must be a production workers.dev URL."
+            exit 1
+          fi
+          ./scripts/build_dmg.sh
+
+      - name: Validate Sparkle private key
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "SPARKLE_PRIVATE_KEY secret is required for Sparkle appcast signing."
+            exit 1
+          fi
+
+      - name: Fetch Sparkle tools (prebuilt)
+        env:
+          SPARKLE_VERSION: 2.8.1
+        run: |
+          ARCHIVE_PATH="$RUNNER_TEMP/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          TOOLS_DIR="$RUNNER_TEMP/sparkle-tools"
+          curl -fL -o "$ARCHIVE_PATH" \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          mkdir -p "$TOOLS_DIR"
+          tar -xf "$ARCHIVE_PATH" -C "$TOOLS_DIR"
+
+          GENERATE_APPCAST_PATH="$(find "$TOOLS_DIR" -type f -name generate_appcast | head -n1)"
+          if [[ -z "$GENERATE_APPCAST_PATH" || ! -x "$GENERATE_APPCAST_PATH" ]]; then
+            echo "Unable to locate executable generate_appcast in Sparkle archive."
+            exit 1
+          fi
+
+          echo "SPARKLE_BIN=$(dirname "$GENERATE_APPCAST_PATH")" >> $GITHUB_ENV
+          "$GENERATE_APPCAST_PATH" --help >/dev/null
+
+      - name: Build Sparkle update archive
+        run: |
+          APP_NAME="KeyStats"
+          ARCHIVE_PATH="build/sparkle/$APP_NAME.xcarchive"
+          STAGING_DIR="build/sparkle/staging"
+          OUTPUT_DIR="build/sparkle/output"
+          mkdir -p "$STAGING_DIR" "$OUTPUT_DIR"
+
+          xcodebuild -project KeyStats.xcodeproj \
+            -scheme KeyStats \
+            -configuration Release \
+            -derivedDataPath build/sparkle/DerivedData \
+            -archivePath "$ARCHIVE_PATH" \
+            archive \
+            CODE_SIGN_IDENTITY="-" \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            KEYSTATS_SYNC_SERVICE_URL="$KEYSTATS_SYNC_SERVICE_URL"
+
+          APP_PATH="$ARCHIVE_PATH/Products/Applications/$APP_NAME.app"
+          cp -R "$APP_PATH" "$STAGING_DIR/"
+
+          ./scripts/embed_vendored_helper.sh "$STAGING_DIR/$APP_NAME.app"
+          ./scripts/sign_app.sh "$STAGING_DIR/$APP_NAME.app"
+          ditto -c -k --sequesterRsrc --keepParent "$STAGING_DIR/$APP_NAME.app" "$OUTPUT_DIR/$APP_NAME.zip"
+
+      - name: Generate Sparkle appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          OUTPUT_DIR="build/sparkle/output"
+          KEY_FILE="$RUNNER_TEMP/sparkle_private.key"
+          DOWNLOAD_PREFIX="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
+          printf "%s" "$SPARKLE_PRIVATE_KEY" > "$KEY_FILE"
+          "$SPARKLE_BIN/generate_appcast" \
+            --ed-key-file "$KEY_FILE" \
+            --download-url-prefix "$DOWNLOAD_PREFIX/" \
+            -o "$OUTPUT_DIR/appcast.xml" \
+            "$OUTPUT_DIR"
+          grep -q "sparkle:edSignature" "$OUTPUT_DIR/appcast.xml"
+
+      - name: Calculate SHA256
+        id: sha256
+        run: echo "SHA256=$(shasum -a 256 KeyStats.dmg | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
+      - name: Prepare macOS artifacts
+        run: |
+          mkdir -p dist/macos
+          cp KeyStats.dmg dist/macos/KeyStats.dmg
+          cp build/sparkle/output/KeyStats.zip dist/macos/KeyStats.zip
+          cp build/sparkle/output/appcast.xml dist/macos/appcast.xml
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist/macos/*
+
+  # ============================================================
+  # Windows Build
+  # ============================================================
+  build-windows:
+    runs-on: windows-latest
+    env:
+      KEYSTATS_SYNC_SERVICE_URL: ${{ vars.KEYSTATS_SYNC_PRODUCTION_URL }}
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Update app version
+        shell: pwsh
+        run: |
+          $csprojPath = "KeyStats.Windows/KeyStats/KeyStats.csproj"
+          $version = "${{ steps.version.outputs.VERSION }}"
+          (Get-Content $csprojPath) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content $csprojPath
+          Write-Host "Updated Version to $version"
+
+      - name: Build Windows app
+        shell: pwsh
+        working-directory: KeyStats.Windows
+        run: |
+          if ($env:KEYSTATS_SYNC_SERVICE_URL -notmatch '^https://[A-Za-z0-9.-]+\.workers\.dev/?$') {
+            throw 'KEYSTATS_SYNC_PRODUCTION_URL must be a production workers.dev URL.'
+          }
+          .\build.ps1 -Configuration Release -SyncServiceBaseUrl $env:KEYSTATS_SYNC_SERVICE_URL
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: KeyStats.Windows/dist/*.zip
+
+  # ============================================================
+  # Create Release
+  # ============================================================
+  create-release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: release-assets/macos
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-zip
+          path: release-assets/windows
+
+      - name: List artifacts
+        run: |
+          ls -la release-assets/macos
+          ls -la release-assets/windows
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release-assets/macos/KeyStats.dmg
+            release-assets/macos/KeyStats.zip
+            release-assets/macos/appcast.xml
+            release-assets/windows/*.zip
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-beta') }}
+          make_latest: ${{ contains(github.ref_name, '-beta') && 'false' || 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update beta-channel appcast (beta only)
+        if: contains(github.ref_name, '-beta')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Ensure beta-channel release exists (one-time auto-create)
+          if ! gh release view beta-channel --repo ${{ github.repository }} >/dev/null 2>&1; then
+            gh release create beta-channel \
+              --repo ${{ github.repository }} \
+              --prerelease \
+              --title "Beta Channel Feed" \
+              --notes "Auto-updated by CI. Sparkle clients on the beta channel pull releases-assets/appcast.xml from this release. Tag exists only as a container — does not correspond to any source revision."
+          fi
+
+          # Overwrite the appcast.xml asset with the one this build just produced
+          gh release upload beta-channel \
+            release-assets/macos/appcast.xml \
+            --repo ${{ github.repository }} \
+            --clobber
+
+          echo "beta-channel/appcast.xml updated to ${{ github.ref_name }}"
+
+      - name: Update Homebrew Tap
+        if: ${{ !contains(github.ref_name, '-beta') }}
+        env:
+          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.build-macos.outputs.version }}"
+          SHA256="${{ needs.build-macos.outputs.sha256 }}"
+
+          git clone https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/debugtheworldbot/homebrew-keystats.git /tmp/homebrew-keystats
+          cd /tmp/homebrew-keystats
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" Casks/keystats.rb
+          sed -i "s/sha256 \".*\"/sha256 \"${SHA256}\"/" Casks/keystats.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/keystats.rb
+          if git diff --cached --quiet; then
+            echo "Homebrew tap already up to date for v${VERSION}; skipping commit."
+          else
+            git commit -m "chore: update keystats to v${VERSION}"
+            git push origin main
+          fi
+
+      - name: Update Scoop Bucket
+        if: ${{ !contains(github.ref_name, '-beta') }}
+        env:
+          SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+        run: |
+          VERSION="${{ needs.build-windows.outputs.version }}"
+          ZIP_NAME="KeyStats-Windows-${VERSION}.zip"
+          ZIP_PATH="release-assets/windows/${ZIP_NAME}"
+          SHA256=$(sha256sum "${ZIP_PATH}" | cut -d ' ' -f 1)
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${ZIP_NAME}"
+
+          cat > /tmp/keystats.json <<MANIFEST
+          {
+              "version": "${VERSION}",
+              "description": "Privacy-focused keyboard and mouse statistics tracker",
+              "homepage": "https://github.com/${{ github.repository }}",
+              "license": "MIT",
+              "url": "${DOWNLOAD_URL}",
+              "hash": "${SHA256}",
+              "shortcuts": [
+                  ["KeyStats.exe", "KeyStats"]
+              ],
+              "checkver": "github",
+              "autoupdate": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/v\$version/KeyStats-Windows-\$version.zip"
+              }
+          }
+          MANIFEST
+
+          python3 -m json.tool /tmp/keystats.json > /dev/null
+
+          git clone https://x-access-token:${SCOOP_BUCKET_TOKEN}@github.com/debugtheworldbot/scoop-keystats.git /tmp/scoop-keystats
+          cd /tmp/scoop-keystats
+          mkdir -p bucket
+          cp /tmp/keystats.json bucket/keystats.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bucket/keystats.json
+          git diff --cached --quiet || (git commit -m "chore: update keystats to v${VERSION}" && git push origin main)
+
+      - name: Verify Release
+        run: |
+          echo "Release v${{ needs.build-macos.outputs.version }} created successfully"
