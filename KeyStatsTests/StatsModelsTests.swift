@@ -24,6 +24,92 @@ final class StatsModelsTests: XCTestCase {
         let stats = DailyStats(date: date)
 
         XCTAssertEqual(stats.date, Calendar.current.startOfDay(for: date))
+        XCTAssertEqual(stats.scrollSessions, 0)
+    }
+
+    func testScrollSessionBeganChangedEndedCompletesOnce() {
+        var tracker = ScrollSessionTracker()
+
+        XCTAssertEqual(tracker.consume(scrollEvent(.mayBegin)), .none)
+        XCTAssertEqual(tracker.consume(scrollEvent(.began)), .began)
+        XCTAssertEqual(tracker.consume(scrollEvent(.changed)), .none)
+        XCTAssertEqual(tracker.consume(scrollEvent(.ended)), .completed)
+        XCTAssertFalse(tracker.isActive)
+    }
+
+    func testExplicitPhaseCountsEvenWhenEventIsNotMarkedContinuous() {
+        var tracker = ScrollSessionTracker()
+
+        XCTAssertEqual(tracker.consume(scrollEvent(.began, isContinuous: false)), .began)
+        XCTAssertEqual(tracker.consume(scrollEvent(.ended, isContinuous: false)), .completed)
+    }
+
+    func testCoreGraphicsScrollPhaseRawValuesAreMappedCentrally() {
+        XCTAssertEqual(ScrollEventPhase.began.rawValue, 1)
+        XCTAssertEqual(ScrollEventPhase.changed.rawValue, 2)
+        XCTAssertEqual(ScrollEventPhase.ended.rawValue, 4)
+        XCTAssertEqual(ScrollEventPhase.cancelled.rawValue, 8)
+        XCTAssertEqual(ScrollEventPhase.mayBegin.rawValue, 128)
+        XCTAssertEqual(ScrollMomentumPhase.began.rawValue, 1)
+        XCTAssertEqual(ScrollMomentumPhase.changed.rawValue, 2)
+        XCTAssertEqual(ScrollMomentumPhase.ended.rawValue, 3)
+    }
+
+    func testScrollSessionMultipleChangedEventsStillCompleteOnce() {
+        var tracker = ScrollSessionTracker()
+        let transitions = [
+            tracker.consume(scrollEvent(.began)),
+            tracker.consume(scrollEvent(.changed)),
+            tracker.consume(scrollEvent(.changed)),
+            tracker.consume(scrollEvent(.changed)),
+            tracker.consume(scrollEvent(.ended))
+        ]
+
+        XCTAssertEqual(transitions.filter { $0 == .completed }.count, 1)
+    }
+
+    func testMomentumPhasesDoNotCreateOrCompleteScrollSession() {
+        var tracker = ScrollSessionTracker()
+
+        XCTAssertEqual(tracker.consume(scrollEvent(.none, momentum: .began)), .none)
+        XCTAssertEqual(tracker.consume(scrollEvent(.none, momentum: .changed)), .none)
+        XCTAssertEqual(tracker.consume(scrollEvent(.none, momentum: .ended)), .none)
+        XCTAssertFalse(tracker.isActive)
+    }
+
+    func testCancelledScrollSessionDoesNotComplete() {
+        var tracker = ScrollSessionTracker()
+
+        XCTAssertEqual(tracker.consume(scrollEvent(.began)), .began)
+        XCTAssertEqual(tracker.consume(scrollEvent(.cancelled)), .cancelled)
+        XCTAssertEqual(tracker.consume(scrollEvent(.ended)), .none)
+        XCTAssertFalse(tracker.isActive)
+    }
+
+    func testEndedWithoutBeganDoesNotCompleteScrollSession() {
+        var tracker = ScrollSessionTracker()
+
+        XCTAssertEqual(tracker.consume(scrollEvent(.ended)), .none)
+        XCTAssertFalse(tracker.isActive)
+    }
+
+    func testTwoCompleteScrollSessionsAreCountedIndependently() {
+        var tracker = ScrollSessionTracker()
+        var completed = 0
+
+        for phase in [ScrollEventPhase.began, .changed, .ended, .began, .ended] {
+            if tracker.consume(scrollEvent(phase)) == .completed {
+                completed += 1
+            }
+        }
+
+        XCTAssertEqual(completed, 2)
+    }
+
+    func testScrollSessionAggregationSumsHistoryWithoutOverflow() {
+        XCTAssertEqual(aggregateScrollSessionCounts([2, 3, 4]), 9)
+        XCTAssertEqual(aggregateScrollSessionCounts([Int.max, 1]), Int.max)
+        XCTAssertEqual(aggregateScrollSessionCounts([-3, 2]), 2)
     }
 
     func testDailyStatsCorrectionRateCountsDeleteVariants() {
@@ -53,6 +139,13 @@ final class StatsModelsTests: XCTestCase {
         XCTAssertTrue(stats.hasAnyActivity)
     }
 
+    func testDailyStatsHasAnyActivityDetectsScrollSessionOnly() {
+        var stats = DailyStats(date: Date())
+        stats.scrollSessions = 1
+
+        XCTAssertTrue(stats.hasAnyActivity)
+    }
+
     func testDailyStatsCodableBackfillsLegacyOtherClicks() throws {
         let json = """
         {
@@ -70,6 +163,19 @@ final class StatsModelsTests: XCTestCase {
         XCTAssertEqual(decoded.sideForwardClicks, 0)
         XCTAssertEqual(decoded.totalClicks, 7)
         XCTAssertEqual(decoded.mouseDistance, 15.5, accuracy: 0.0001)
+        XCTAssertEqual(decoded.scrollSessions, 0)
+    }
+
+    func testDailyStatsScrollSessionsCodableRoundTrip() throws {
+        var original = DailyStats(date: Date(timeIntervalSince1970: 1_710_028_800))
+        original.scrollSessions = 12
+        original.scrollDistance = 345.5
+
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(DailyStats.self, from: data)
+
+        XCTAssertEqual(decoded.scrollSessions, 12)
+        XCTAssertEqual(decoded.scrollDistance, 345.5, accuracy: 0.0001)
     }
 
     func testAllTimeStatsInitialStartsEmpty() {
@@ -77,6 +183,7 @@ final class StatsModelsTests: XCTestCase {
 
         XCTAssertEqual(stats.totalKeyPresses, 0)
         XCTAssertEqual(stats.totalClicks, 0)
+        XCTAssertEqual(stats.totalScrollSessions, 0)
         XCTAssertEqual(stats.correctionRate, 0)
         XCTAssertEqual(stats.inputRatio, 0)
         XCTAssertNil(stats.firstDate)
@@ -93,6 +200,7 @@ final class StatsModelsTests: XCTestCase {
             totalSideForwardClicks: 0,
             totalMouseDistance: 0,
             totalScrollDistance: 0,
+            totalScrollSessions: 0,
             keyPressCounts: [
                 "Option + Delete": 2,
                 "ForwardDelete": 1,
@@ -252,4 +360,16 @@ final class StatsModelsTests: XCTestCase {
 
         XCTAssertEqual(committed, "RightShift")
     }
+}
+
+private func scrollEvent(
+    _ phase: ScrollEventPhase,
+    momentum: ScrollMomentumPhase = .none,
+    isContinuous: Bool = true
+) -> ScrollEventMetadata {
+    ScrollEventMetadata(
+        scrollPhaseRaw: phase.rawValue,
+        momentumPhaseRaw: momentum.rawValue,
+        isContinuous: isContinuous
+    )
 }

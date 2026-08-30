@@ -1,496 +1,279 @@
-# KeyStats - AI Agent Development Guide
+# KeyStats AI Agent 开发指南
 
-**Project Type**: macOS Native Menu Bar Application
-**Language**: Swift 5.0
-**Target**: macOS 13.0+ (Ventura)
-**Architecture**: Event-driven singleton pattern with AppKit UI
+本文档是面向 Codex/AI Agent 的项目操作手册。所有判断以当前源码为准；如果本文档与实现不一致，先核对代码，再以最小范围修正文档或实现。仓库内更深层目录若存在自己的 `AGENTS.md`，该目录下的工作同时受更具体规则约束。
 
-## Quick Context
+## 项目定位
 
-KeyStats is a privacy-focused macOS menu bar app that tracks keyboard/mouse statistics (counts only, no content logging). Core components:
+KeyStats 是 macOS 13+ 原生菜单栏应用，主工程使用 Swift 5、AppKit，并在部分界面嵌入 SwiftUI。产品正在从键鼠计数器逐步发展为：
 
-- `InputMonitor`: Global event tap for keyboard/mouse monitoring
-- `StatsManager`: Data aggregation and persistence (UserDefaults)
-- `MenuBarController`: Status bar UI with compact dual-line display
-- `StatsPopoverViewController`: Detailed statistics panel
+> 隐私优先、低功耗的 macOS 物理交互统计与可视化工具。
 
-**Privacy First**: NEVER log actual keystrokes, mouse positions, or user input content - only aggregate counts and distances.
+长期产品方向包括：
 
----
+- 键盘、鼠标，以及未来可能加入的 Trackpad 交互统计。
+- 长期累计数据的高质量可视化。
+- Keyboard Visualization / Growth Keyboard。
+- History Replay。
+- Interaction Profile。
+- 主要供用户自己查看的分应用交互统计。
+- Privacy Center。
+- 逐步将用户可见页面迁移到 SwiftUI。
+- 后台采集保持极低 CPU、内存、wakeups 和磁盘写入。
+- 漂亮视觉只在用户正在查看时消耗额外性能。
 
-## Decision Trees for Common Tasks
+当前近期重点是 macOS 产品本身。`KeyStats.Windows/` 和多设备同步已经存在，但除非用户明确指定，不要主动扩展 Windows、同步协议或 Worker 基础设施。
 
-### 🔧 Before Making Any Code Changes
+## 最高优先级：Git 与远端安全
 
+未经用户在当前对话中明确要求，禁止执行：
+
+- `git commit`
+- `git push`
+- `git push --force` 或任何形式的 force-push
+- 创建或合并 PR
+- 创建 tag
+- 创建 release
+- deploy，包括 staging 和 production
+- 任何会修改远端仓库、远端分支或外部部署状态的操作
+
+任务完成后的默认流程是：
+
+1. 修改本地文件。
+2. build，并运行相关测试。
+3. 查看 `git diff` 和 `git status`。
+4. 汇报修改文件、验证结果、重要 diff 与未验证部分。
+5. 停止并等待用户审查。
+
+不要因为功能完成、测试通过或改动具备原子性而自动 commit。只有用户明确说出“commit”“push”“deploy”等指令时，才执行对应操作；授权不自动扩展到其他 Git 或远端动作。
+
+## 隐私边界
+
+KeyStats 不是 keylogger。
+
+永远不要记录、持久化、导出或上传：
+
+- 用户实际输入文本。
+- 按键顺序，或任何可以重建文本的原始输入序列。
+- 鼠标点击的具体坐标。
+- 完整鼠标轨迹。
+- 用户内容、窗口内容或剪贴板内容。
+
+允许保存的是聚合统计，例如：
+
+- 按键总次数。
+- 每个键或组合键名称的累计次数。
+- 鼠标各类点击次数。
+- 鼠标移动距离和滚动距离。
+- KPS / CPS 与峰值。
+- 分应用聚合数据。
+
+当前鼠标移动坐标会在内存中以采样后的事件经过 XPC，用于计算相邻点距离；它们不得被日志化、持久化、上传或改造成轨迹历史。按键事件中的 key code 只应用于生成聚合键名和计数，不得形成可回放的原始按键序列。
+
+分应用统计由 `AppActivityTracker` 根据事件来源 PID 解析 bundle ID 和显示名，再由 `StatsManager` 聚合。此数据主要供用户本地查看，不得自动用于产品 Analytics。
+
+## 当前后端架构
+
+正式输入链路是：
+
+```text
+macOS input events
+→ KeyStatsHelper
+→ EventTapController / listen-only CGEventTap
+→ PayloadBuilder
+→ HelperXPCListener
+→ XPC
+→ HelperXPCClient
+→ RemoteEventProcessor
+→ StatsManager
+→ UI / UserDefaults persistence
 ```
-1. Read the relevant file(s) first
-2. Check existing patterns and naming conventions
-3. Verify Swift version compatibility (5.0+)
-4. Consider thread safety (main vs background threads)
-5. Check if changes affect permissions or privacy
-```
 
-### 🎯 When Adding New Features
+不存在由主 App 中 `InputMonitor` 负责全局监听的正式架构。不要按照旧实现或旧文档寻找、恢复或新建 `InputMonitor`。
 
-```
-New feature request?
-├─ UI-related?
-│  ├─ Menu bar display? → Update MenuBarController
-│  └─ Detail panel? → Update StatsPopoverViewController
-├─ Statistics tracking?
-│  ├─ New metric? → Update StatsManager.Stats struct + persistence
-│  └─ New event type? → Update InputMonitor event callbacks
-├─ Data persistence? → Update StatsManager Codable conformance
-└─ Permissions needed? → Update Info.plist + AppDelegate
-```
+关键职责如下：
 
-### 🐛 When Debugging Issues
+- `KeyStats/AppDelegate.swift`
+  - 启动菜单栏 UI、更新与同步协调器。
+  - 安装并连接 Helper，设置 XPC event sink。
+  - 协调辅助功能权限提示、授权轮询与 Helper 启动。
+  - 通过 `AnalyticsManager` 发出既有产品事件。
+- `KeyStatsHelper/main.swift`
+  - 启动 `HelperXPCListener` 并保持 Helper run loop。
+- `KeyStatsHelper/EventTapController.swift`
+  - Helper 内唯一正式 `CGEventTap` 所有者。
+  - 使用 `.listenOnly` 的 `.cgSessionEventTap` 监听键盘、点击、滚轮和移动事件。
+  - 当前对鼠标移动/拖动进行约 30 Hz 采样，并处理 event tap 被禁用后的恢复。
+- `KeyStatsHelper/PayloadBuilder.swift`
+  - 将 `CGEvent` 转成受限的 XPC 字典字段。
+  - 不传输用户文本；移动坐标只用于主 App 计算聚合距离。
+- `KeyStatsHelper/HelperXPCListener.swift`
+  - 提供 XPC 服务、校验主 App 的签名标识和当前用户 UID。
+  - 管理单个活动连接、权限握手、tap 生命周期和事件转发。
+- `KeyStats/HelperSupervisor.swift`
+  - 从 App bundle 安装 Helper 到 Application Support。
+  - 以 cdhash 判断是否需要替换，维护 LaunchAgent；这与 TCC 授权稳定性直接相关。
+- `KeyStats/HelperXPCClient.swift`
+  - 管理主 App 到 Helper 的连接、握手、状态、重连和权限请求。
+  - 使用现有 `NSLock` 与 one-shot completion 保护并发状态。
+- `KeyStats/RemoteEventProcessor.swift`
+  - 解码 Helper payload，过滤 auto-repeat，处理修饰键状态和键名映射。
+  - 将键盘、点击、滚动、移动距离和可选的 App identity 写入 `StatsManager`。
+- `KeyStats/AppActivityTracker.swift`
+  - 缓存前台 App 与 PID 对应的 bundle ID/显示名，仅为分应用聚合提供 identity。
+- `KeyStats/StatsModels.swift`、`KeyStats/AppStats.swift`
+  - 定义 `DailyStats`、`AllTimeStats`、`AppStats` 与键位规范化/聚合逻辑。
+  - Codable 解码包含历史字段兼容，例如 legacy `otherClicks` 和旧 peak 数值格式。
+- `KeyStats/StatsManager.swift`
+  - 聚合当前日、历史、每键、每 App、距离、KPS/CPS 和通知数据。
+  - 通过 `UserDefaults` 保存 JSON 编码的当前数据与历史。
+  - 使用锁、snapshot、延迟保存、UI 更新合并和午夜切日逻辑。
+  - 区分本机可写历史与包含远端 shard 的显示快照。
+- `KeyStats/MenuBarController.swift`
+  - 管理 `NSStatusItem`、`NSPopover`、右键菜单和菜单栏更新。
+  - 当前菜单栏视图已经使用 `NSHostingView` 嵌入 SwiftUI，但 shell 仍为 AppKit。
+- `KeyStats/StatsPopoverViewController.swift`
+  - AppKit 统计 popover，部分数值/KPS 视图嵌入 SwiftUI。
+  - 只在显示期间订阅统计更新并运行 KPS 刷新 timer。
+- `KeyStats/KeyboardHeatmapViewController.swift`
+  - AppKit 键盘热力图与日期切换；窗口可见时订阅统计更新。
+- `KeyStats/AnalyticsManager.swift`
+  - 唯一允许直接接触 PostHog SDK 的产品分析入口。
+- `Package.swift`、`KeyStatsTests/`
+  - SwiftPM 选择可独立测试的 Core 源文件，并用 XCTest 覆盖模型、兼容解码、热力图聚合、同步核心和更新检查协调逻辑。
 
-```
-Issue type?
-├─ No statistics updating?
-│  ├─ Check: AXIsProcessTrusted() returns true
-│  ├─ Check: InputMonitor.isMonitoring is true
-│  └─ Check: Event tap is active (not nil)
-├─ UI not updating?
-│  ├─ Verify: Updates on DispatchQueue.main
-│  └─ Check: menuBarUpdateHandler is set
-├─ Data not persisting?
-│  └─ Check: StatsManager.saveStats() called on changes
-└─ Performance issues?
-    └─ Review: Event sampling rates and debounce timers
-```
+## 成熟后端的处理原则
 
----
+以下模块已形成相互依赖的稳定链路，不要仅以“现代化”“代码较老”或“准备迁移 SwiftUI”为理由重写：
 
-## Critical Rules
+- `KeyStatsHelper`
+- `CGEventTap`
+- XPC 协议与连接
+- `HelperSupervisor`
+- `HelperXPCClient`
+- `RemoteEventProcessor`
+- `StatsManager` 核心统计逻辑
+- 现有持久化兼容逻辑
+- 权限与 TCC 处理
 
-### 🔴 MUST Follow (Security & Privacy)
+只有具体功能或已确认缺陷确实要求时，才在这些模块做最小修改。不要为了 SwiftUI 迁移而改写后端、事件链路或存储模型。
 
-- ✅ Only track counts and distances, NEVER content
-- ✅ Always check accessibility permissions before monitoring
-- ✅ Use `weak` references for delegates/closures to prevent leaks
-- ✅ Dispatch UI updates on `DispatchQueue.main`
-- ✅ Clean up event taps in `stopMonitoring()` and `deinit`
+涉及 Helper、Bundle ID、Mach service、签名、cdhash、LaunchAgent、entitlements、TCC 或 Accessibility 的改动一律视为高风险。修改前必须完整追踪安装、签名、权限和 XPC 两端的影响。
 
-### 🟡 SHOULD Follow (Quality)
+## UI 技术方向
 
-- ✅ One class per file, filename matches class name
-- ✅ Use `// MARK: -` for code organization
-- ✅ Use `guard` for early returns and validation
-- ✅ Use descriptive names, avoid magic numbers
-- ✅ Localize user-facing strings with `NSLocalizedString()`
-- ✅ Ensure UI colors adapt to dark mode (use dynamic colors + `resolvedCGColor`/`resolvedColor`)
-- ✅ When adding a new page/window/popover, add matching analytics at the same time: a `pageview` for the page itself and `click` events for key entry/actions, reusing the shared helper and stable event/property names
+当前 UI 以 AppKit 为主，并已有少量 SwiftUI 嵌入。未来可逐页迁移用户可见页面，例如：
 
-### 🌗 Dark/Light Theme Switching Notes (Critical)
+- Keyboard Visualization
+- Stats Popover
+- All-Time Stats
+- App Stats
+- Settings
+- Privacy Center
 
-- ✅ `CALayer.backgroundColor` / `borderColor` use `CGColor` (a static snapshot) and do not automatically follow appearance changes
-- ✅ Do not cache `NSColor.controlBackgroundColor.withAlphaComponent(...)` and reuse it across updates (especially when launched in dark mode), as it may lock in the old appearance
-- ✅ For "dynamic system color + alpha", always resolve under the current `effectiveAppearance` using a helper, e.g. `resolvedCGColor(color, alpha:for:)`
-- ✅ Re-assign layer colors on every theme change; do not rely on existing `CGColor` values to auto-update
-- ✅ Prefer multi-source appearance refresh triggers: `AppearanceTrackingView`, `NSApp.effectiveAppearance`, `AppleInterfaceThemeChangedNotification`, and `NSApplication.didBecomeActiveNotification`
-- ✅ When debugging theme issues, log `app/view/window` appearance plus final layer RGBA first to distinguish "trigger path issues" from "color resolution issues"
+迁移规则：
 
-### 🟢 RECOMMENDED (Best Practices)
+- 不进行一次性全量 SwiftUI rewrite。
+- 每次只迁移边界清晰、可独立验证的页面或组件。
+- 可以长期保留 `NSStatusItem`、`NSPopover`、`NSWindow`、`NSWindowController` 等 AppKit shell。
+- 不为了“纯 SwiftUI”牺牲菜单栏、窗口焦点、popover、快捷键、权限提示或现有行为。
+- 动画和高频刷新只应在相关窗口可见时运行，消失或关闭时必须停止订阅和 timer。
 
-- ✅ Document public APIs with `///` comments
-- ✅ Use `private` for internal implementation details
-- ✅ Implement Codable for data structures needing persistence
-- ✅ Batch UI updates to reduce main thread blocking
+## Analytics 规则
 
-### 🟣 Automatic Commit Policy
+当前 Analytics consent 后端由 `AnalyticsManager` 管理：
 
-- ✅ After a feature or module is fully implemented and its relevant checks pass, automatically create an atomic Git commit without waiting for an additional user request
-- ✅ Before committing, inspect `git status` again and include only files changed for the completed feature or module
-- ✅ Do not automatically commit incomplete work, failed verification, or unrelated existing changes
-- ✅ Follow the repository's commit message and Git safety rules for every automatic commit
+- consent key 是 `analytics.optIn.v1`。
+- key 不存在时视为关闭，默认不启用 Analytics。
+- 关闭时不得初始化 PostHog，也不得发送事件。
+- 所有 `trackEvent`、`trackClick`、`trackPageView` 必须经过 `AnalyticsManager`。
+- 禁止在其他文件直接调用 `PostHogSDK` 或另建绕过 consent 的分析通道。
 
-### ☁️ Sync Worker Staging Deployment
+PostHog 只用于了解用户如何使用 KeyStats 产品本身，例如 App 版本、macOS 版本、页面打开、功能操作和设置状态。不得把下列内容放入 Analytics event 或 properties：
 
-- ✅ After changing the staging sync service (`services/sync-worker/**`, `contracts/sync/v1/**`, or its staging workflow) and passing the relevant checks, deploy the staging Worker directly without waiting for additional confirmation
-- ✅ Apply pending staging D1 migrations before deploying, and always target the explicit `staging` Wrangler environment
-- ✅ Never deploy the production Worker without explicit user authorization in the current conversation
+- 按键次数、键位或组合键统计。
+- 鼠标点击、移动或滚动统计。
+- KPS / CPS。
+- 分应用统计、App 列表或用户使用了哪些 App。
+- 历史交互数据或任何可关联的原始输入事件。
 
----
+新增 Analytics 事件前先检查 properties 的隐私边界；不要因为本地已有某项统计，就默认它可以上传。
 
-## Build & Development Commands
+## 持久化与兼容性
 
-### Building
+- 不要随意改名或删除已有 `UserDefaults` key、Codable 字段、导入导出字段或同步 schema。
+- 修改 `DailyStats`、`AppStats`、`StatsManager` 时，必须考虑旧版本历史数据的解码和迁移。
+- 新字段应有安全默认值；需要改变旧字段语义时，先设计明确迁移方案并添加兼容测试。
+- 不要把完整长期历史在每个输入事件上重新序列化；沿用当前延迟保存与 snapshot 模式，除非 Instruments 数据证明需要调整。
+- 不要混淆本机可写历史、远端缓存和用于 UI 的聚合显示快照。
+
+## 线程与性能原则
+
+后台统计的准确性和低功耗优先于实时视觉刷新。
+
+- 键盘和点击计数可以逐事件精确更新；UI 不需要逐事件重绘。
+- 能 debounce、coalesce 或批量处理的 UI 更新与落盘应合并。
+- 鼠标移动等高频事件必须保留合理 sampling，不要把所有 movement event 直接送入重型逻辑。
+- 不要在窗口不可见时运行视觉动画、`TimelineView`、`CVDisplayLink`、高频 `Timer` 或持续刷新。
+- 避免无意义的长期 global event monitor；已有 monitor 也必须有明确用途和清理路径。
+- 避免在输入热路径执行网络请求、磁盘 I/O、完整历史聚合或昂贵 App 查询。
+- 性能调整优先依据 Instruments 的 CPU、Allocations、Energy Log、wakeups 和文件写入实测，不做纯理论的大重构。
+
+并发修改时优先沿用当前经过验证的 `NSLock`、串行队列和 snapshot 模式。不要未经验证就把 Helper、XPC 或 `StatsManager` 整体改成 Actor。所有 AppKit/SwiftUI 状态更新必须回到主线程；闭包和 observer 按现有模式使用 `[weak self]`，并在生命周期结束时清理。
+
+## 代码修改规则
+
+1. 修改前阅读调用链两端和相关测试，不依据文件名猜实现。
+2. 优先最小修改，不做“顺便重构”。
+3. 不为了统一代码风格而重写成熟模块。
+4. 用户要求具体功能时，不自动扩展成架构重写、数据迁移或额外产品功能。
+5. 不修改无关文件；工作区已有改动默认属于用户，必须保留。
+6. 新增用户可见文本时使用 `NSLocalizedString`，并同步检查 `en`、`zh-Hans`、`zh-Hant` 资源。
+7. 新增文件时确认它同时进入正确的 Xcode target；若是 App-only 文件，也要检查 `Package.swift` 是否需要排除。
+8. 涉及数据、权限、Helper 或同步时，先写清兼容和失败路径，再实现。
+
+## 深色/浅色模式
+
+- `CALayer.backgroundColor`、`borderColor` 等 `CGColor` 是静态快照，不会自动随 appearance 更新。
+- 动态 `NSColor` 转 `CGColor` 时，在目标 view 的当前 `effectiveAppearance` 下解析。
+- appearance 变化后重新赋值 layer colors，不依赖旧 `CGColor` 自动变化。
+- 沿用已有 `AppearanceTrackingView`、`NSApp.effectiveAppearance` observation 和 `resolvedCGColor` / `resolvedColor` 模式。
+- 排查主题问题时先确认 app、window、view 的 appearance 及最终解析颜色。
+
+## 构建与测试
+
+常用命令：
 
 ```bash
-# Development (Xcode - recommended)
-open KeyStats.xcodeproj
-# Press ⌘R to build and run
+swift test
 
-# Command line (Debug)
-xcodebuild -project KeyStats.xcodeproj -scheme KeyStats -configuration Debug build
-
-# Command line (Release)
-xcodebuild -project KeyStats.xcodeproj -scheme KeyStats -configuration Release build
+xcodebuild \
+  -project KeyStats.xcodeproj \
+  -scheme KeyStats \
+  -configuration Debug \
+  -destination 'platform=macOS' \
+  build
 ```
 
-### Distribution
+当前自动测试事实：
 
-```bash
-# Create DMG for distribution
-./scripts/build_dmg.sh
-```
+- `Package.swift` 定义 `KeyStatsCore` 和 `KeyStatsCoreTests`。
+- `KeyStatsTests/` 当前包含 `AppStatsTests`、`StatsModelsTests`、`SyncCoreTests`、`UpdateCheckCoordinatorTests`。
+- 本次文档审阅时共发现 61 个 XCTest；这是当前快照，不是永久数量保证。
+- SwiftPM 测试只编译 `Package.swift` 明确列出的 Core 文件，不覆盖 AppDelegate、Analytics、Helper、XPC、权限、完整 `StatsManager` 或 UI 行为。
 
-### Testing
+每次实现完成后至少：
 
-```bash
-# Currently no automated tests
-# When adding: Use XCTest framework in separate Tests target
-xcodebuild test -project KeyStats.xcodeproj -scheme KeyStats
-```
+1. 运行相关 XCTest；适合时运行完整 `swift test`。
+2. 构建 `KeyStats` scheme。
+3. 查看 `git diff --check`、`git diff` 和 `git status`。
+4. 确认没有无关文件变化。
 
----
+`BUILD SUCCEEDED` 只证明编译和链接成功。涉及 Helper、权限、TCC、XPC、输入采集、窗口生命周期或能耗时，还需要对应的真机手动验证或 Instruments 数据；不能仅凭 build 成功宣称功能已完全验证。
 
-## Code Patterns & Examples
+## 部署与同步边界
 
-### Singleton Pattern (Thread-Safe)
-
-```swift
-class StatsManager {
-    static let shared = StatsManager()
-    private init() {
-        // Load from persistence
-    }
-}
-```
-
-### Permission Checking
-
-```swift
-// Check permission status
-let trusted = AXIsProcessTrusted()
-
-// Request permissions with prompt
-let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-AXIsProcessTrustedWithOptions(options as CFDictionary)
-```
-
-### Main Thread UI Updates
-
-```swift
-DispatchQueue.main.async {
-    self.updateMenuBarDisplay()
-    self.menuBarUpdateHandler?()
-}
-```
-
-### Event Monitoring Setup
-
-```swift
-let eventMask = (1 << CGEventType.keyDown.rawValue) |
-                (1 << CGEventType.leftMouseDown.rawValue)
-
-eventTap = CGEvent.tapCreate(
-    tap: .cgSessionEventTap,
-    place: .headInsertEventTap,
-    options: .defaultTap,
-    eventsOfInterest: CGEventMask(eventMask),
-    callback: eventCallback,
-    userInfo: nil
-)
-```
-
-### Debounced Updates
-
-```swift
-private var updateTimer: Timer?
-
-func scheduleDebouncedStatsUpdate() {
-    updateTimer?.invalidate()
-    updateTimer = Timer.scheduledTimer(
-        withTimeInterval: 0.5,
-        repeats: false
-    ) { [weak self] _ in
-        self?.updateMenuBar()
-    }
-}
-```
-
-### Data Persistence (Codable)
-
-```swift
-struct Stats: Codable {
-    var keyPresses: Int = 0
-    var leftClicks: Int = 0
-    // ... other properties
-}
-
-func saveStats() {
-    if let encoded = try? JSONEncoder().encode(currentStats) {
-        UserDefaults.standard.set(encoded, forKey: "currentStats")
-    }
-}
-
-func loadStats() -> Stats? {
-    guard let data = UserDefaults.standard.data(forKey: "currentStats") else { return nil }
-    return try? JSONDecoder().decode(Stats.self, from: data)
-}
-```
-
----
-
-## File Structure & Responsibilities
-
-```
-KeyStats/
-├── AppDelegate.swift
-│   ├─ App lifecycle & menu bar setup
-│   ├─ Permission checking & request handling
-│   └─ Window/status bar initialization
-│
-├── InputMonitor.swift
-│   ├─ Global event tap creation (CGEvent.tapCreate)
-│   ├─ Keyboard event handling (keyDown)
-│   ├─ Mouse event handling (left/right clicks, movement)
-│   └─ 30Hz mouse sampling for performance
-│
-├── StatsManager.swift
-│   ├─ Statistics data model (Codable struct)
-│   ├─ Data aggregation & calculation
-│   ├─ UserDefaults persistence
-│   ├─ Daily auto-reset at midnight
-│   └─ Debounced UI update callbacks
-│
-├── MenuBarController.swift
-│   ├─ NSStatusItem management
-│   ├─ Dual-line compact display (keyPresses/clicks)
-│   ├─ Number formatting (K/M suffixes)
-│   └─ Popover presentation trigger
-│
-└── StatsPopoverViewController.swift
-    ├─ Detailed statistics display (all metrics)
-    ├─ Reset button handling
-    └─ Quit button handling
-```
-
----
-
-## Common Modification Scenarios
-
-### Adding a New Statistic
-
-1. **Update Stats struct** in `StatsManager.swift`:
-
-```swift
-struct Stats: Codable {
-    var newMetric: Int = 0  // Add new property
-    // ... existing properties
-}
-```
-
-2. **Add tracking logic** in `InputMonitor.swift`:
-
-```swift
-private let eventCallback: CGEventTapCallBack = { proxy, type, event, refcon in
-    // ... existing logic
-    StatsManager.shared.incrementNewMetric()  // Add call
-}
-```
-
-3. **Add increment method** in `StatsManager.swift`:
-
-```swift
-func incrementNewMetric() {
-    currentStats.newMetric += 1
-    scheduleDebouncedStatsUpdate()
-}
-```
-
-4. **Update UI** in `StatsPopoverViewController.swift`:
-
-```swift
-// Add label and update in refreshStats()
-newMetricLabel.stringValue = "\(stats.newMetric)"
-```
-
-### Modifying Menu Bar Display
-
-Edit `MenuBarController.updateMenuBarText()`:
-
-```swift
-func updateMenuBarText(keyPresses: Int, mouseClicks: Int) {
-    let line1 = formatNumber(keyPresses)  // Top line
-    let line2 = formatNumber(mouseClicks) // Bottom line
-    // Update attributed string
-}
-```
-
-### Changing Reset Behavior
-
-Edit `StatsManager.resetStats()`:
-
-```swift
-func resetStats() {
-    currentStats = Stats()  // Reset to defaults
-    saveStats()             // Persist immediately
-    updateMenuBar()         // Update UI
-}
-```
-
----
-
-## UI Style (macOS Liquid Glass)
-
-### Design Rules
-
-- Prefer soft surfaces: use `controlBackgroundColor` with alpha ~0.6–0.85 for panels/cards
-- Avoid heavy borders: use thin 0.5pt separators with low alpha instead of 1pt strokes
-- Use subtle shadows: small radius, low opacity, slight upward offset
-- Keep corners consistent: 10–12pt for cards, smaller (6–8pt) for compact elements
-- Always resolve dynamic colors with `resolvedCGColor(...)` for dark mode consistency
-
-### Helper Pattern
-
-```swift
-private func applyGlassCardStyle(_ layer: CALayer?, for view: NSView) {
-    guard let layer = layer else { return }
-    layer.masksToBounds = false
-    layer.shadowColor = resolvedCGColor(NSColor.black.withAlphaComponent(0.07), for: view)
-    layer.shadowOpacity = 1
-    layer.shadowRadius = 8
-    layer.shadowOffset = NSSize(width: 0, height: -1)
-    layer.borderWidth = 0.5
-    layer.borderColor = resolvedCGColor(NSColor.separatorColor.withAlphaComponent(0.16), for: view)
-}
-```
-
----
-
-## Threading & Performance
-
-### Thread Safety Rules
-
-- **Event callbacks**: Run on background threads → dispatch UI updates to main
-- **UI updates**: ALWAYS use `DispatchQueue.main.async`
-- **Timers**: Run on RunLoop → ensure main thread for UI-affecting timers
-
-### Performance Optimizations
-
-- **Mouse sampling**: 30Hz (1/30 second) instead of every event
-- **Debounced saves**: 500ms delay to batch rapid changes
-- **Lazy UI updates**: Only refresh when popover is visible
-
----
-
-## Localization
-
-### String Localization Pattern
-
-```swift
-// In code
-let title = NSLocalizedString("stats.title", comment: "")
-
-// In Localizable.strings (English)
-"stats.title" = "Statistics";
-
-// In zh-Hans.strings (Chinese)
-"stats.title" = "统计数据";
-```
-
-### Supported Languages
-
-- English (default)
-- 简体中文 (zh-Hans)
-
----
-
-## Testing & Validation Checklist
-
-### Before Committing Changes
-
-- [ ] Build succeeds (⌘B in Xcode)
-- [ ] App runs without crashes
-- [ ] Accessibility permission prompt works
-- [ ] Statistics update in real-time
-- [ ] Menu bar display formats correctly
-- [ ] Data persists across app restarts
-- [ ] Daily reset works at midnight
-- [ ] No force unwraps added (use `if let` or `guard`)
-- [ ] No retain cycles (use `[weak self]` in closures)
-- [ ] UI updates on main thread
-
-### Manual Testing Steps
-
-1. Grant accessibility permission
-2. Type and click to verify counter increments
-3. Check menu bar display updates
-4. Open popover to verify detailed stats
-5. Test reset button
-6. Quit and relaunch to verify persistence
-7. Wait past midnight to verify auto-reset
-
----
-
-## Important Constants
-
-```swift
-// Mouse sampling rate
-private let mouseSampleInterval: TimeInterval = 1.0 / 30.0  // 30Hz
-
-// Debounce delay for stats updates
-private let updateDebounceDelay: TimeInterval = 0.5  // 500ms
-
-// Number formatting thresholds
-let thousandThreshold = 1_000
-let millionThreshold = 1_000_000
-
-// UserDefaults keys
-let statsKey = "currentStats"
-let lastResetDateKey = "lastResetDate"
-```
-
----
-
-## Documentation References
-
-### Apple Documentation
-
-- [CGEvent Reference](https://developer.apple.com/documentation/coregraphics/cgevent)
-- [Accessibility API](https://developer.apple.com/documentation/applicationservices/axuielement)
-- [NSStatusItem](https://developer.apple.com/documentation/appkit/nsstatusitem)
-- [UserDefaults](https://developer.apple.com/documentation/foundation/userdefaults)
-
-### Project Documentation
-
-- [README.md](./README.md) - Chinese documentation
-- [README_EN.md](./README_EN.md) - English documentation
-- [QUICKSTART.md](./QUICKSTART.md) - Quick start guide
-
----
-
-## Agent-Specific Guidance
-
-### When Analyzing Code
-
-1. Read files before making suggestions
-2. Follow existing patterns (singleton, weak delegates, main thread UI)
-3. Check for thread safety implications
-4. Verify privacy compliance (no content logging)
-
-### When Writing Code
-
-1. Match existing code style and naming
-2. Use `// MARK:` sections for organization
-3. Add `weak` to delegate/closure references
-4. Localize user-facing strings
-5. Document public methods with `///`
-
-### When Debugging
-
-1. Check permission status first
-2. Verify event tap is active
-3. Confirm main thread for UI updates
-4. Review debounce timers and sampling rates
-
-### When Refactoring
-
-1. Maintain backward compatibility with UserDefaults keys
-2. Keep singleton patterns intact
-3. Preserve thread safety
-4. Update all UI references if changing data models
+- staging 和 production 都禁止自动部署。
+- 修改 `services/sync-worker/**`、`contracts/sync/v1/**`、迁移或 workflow 也不能触发自动部署。
+- 不自动应用 D1 migration，不自动发布 DMG、release 或 Scoop 包。
+- 多设备同步不是近期开发重点；除非用户明确要求，不主动修改同步协议、Crypto、远端缓存、Worker 或部署配置。
+- 如果任务确实涉及同步，优先保持现有 E2EE、schema、设备绑定和历史兼容行为，并运行对应 Core/Worker 测试。

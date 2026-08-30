@@ -10,6 +10,9 @@ final class RemoteEventProcessor: NSObject, KeyStatsEventSinkProtocol {
     private let decoder = InputEventDecoder.shared
     private var modifierTracker = ModifierStandaloneTracker()
     private let modifierLock = NSLock()
+    private var scrollSessionTracker = ScrollSessionTracker()
+    private var activeScrollSessionAppIdentity: AppIdentity?
+    private let scrollSessionLock = NSLock()
 
     private override init() { super.init() }
 
@@ -77,7 +80,15 @@ final class RemoteEventProcessor: NSObject, KeyStatsEventSinkProtocol {
             let dx = (payload[HelperPayloadFields.scrollDX] as? NSNumber)?.doubleValue ?? 0
             let dy = (payload[HelperPayloadFields.scrollDY] as? NSNumber)?.doubleValue ?? 0
             let total = sqrt(dx * dx + dy * dy)
-            stats.addScrollDistance(total * 10, appIdentity: appIdentity(forPID: pid))
+            let identity = appIdentity(forPID: pid)
+            stats.addScrollDistance(total * 10, appIdentity: identity)
+
+            let metadata = ScrollEventMetadata(
+                scrollPhaseRaw: (payload[HelperPayloadFields.scrollPhase] as? NSNumber)?.int64Value ?? 0,
+                momentumPhaseRaw: (payload[HelperPayloadFields.scrollMomentumPhase] as? NSNumber)?.int64Value ?? 0,
+                isContinuous: (payload[HelperPayloadFields.scrollIsContinuous] as? NSNumber)?.boolValue ?? false
+            )
+            handleScrollSession(metadata, appIdentity: identity, stats: stats)
 
         case .mouseMoved, .leftMouseDragged, .rightMouseDragged:
             guard let x = (payload[HelperPayloadFields.locationX] as? NSNumber)?.doubleValue,
@@ -106,6 +117,34 @@ final class RemoteEventProcessor: NSObject, KeyStatsEventSinkProtocol {
     private func appIdentity(forPID pid: pid_t) -> AppIdentity? {
         guard StatsManager.shared.appStatsEnabled else { return nil }
         return AppActivityTracker.shared.appIdentity(forPID: pid)
+    }
+
+    private func handleScrollSession(
+        _ event: ScrollEventMetadata,
+        appIdentity: AppIdentity?,
+        stats: StatsManager
+    ) {
+        var completedSession = false
+        var completedAppIdentity: AppIdentity?
+
+        scrollSessionLock.lock()
+        switch scrollSessionTracker.consume(event) {
+        case .began:
+            activeScrollSessionAppIdentity = appIdentity
+        case .completed:
+            completedSession = true
+            completedAppIdentity = activeScrollSessionAppIdentity
+            activeScrollSessionAppIdentity = nil
+        case .cancelled:
+            activeScrollSessionAppIdentity = nil
+        case .none:
+            break
+        }
+        scrollSessionLock.unlock()
+
+        if completedSession {
+            stats.incrementScrollSessions(appIdentity: completedAppIdentity)
+        }
     }
 }
 

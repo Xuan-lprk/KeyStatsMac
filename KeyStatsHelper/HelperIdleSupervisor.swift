@@ -4,7 +4,7 @@ final class HelperIdleSupervisor {
     private let idleTimeout: TimeInterval = 30
     private var timer: DispatchSourceTimer?
     private var hasActiveConnection = false
-    private let queue = DispatchQueue(label: "com.keystats.app.helper.idle")
+    private let queue = DispatchQueue(label: "com.xuanlprk.KeyStatsMac.helper.idle")
 
     init() {
         scheduleIdleExit()

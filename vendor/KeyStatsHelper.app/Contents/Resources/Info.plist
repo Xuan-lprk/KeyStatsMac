@@ -3,15 +3,16 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleDisplayName</key><string>KeyStatsMac Beta Helper</string>
   <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
   <key>CFBundleIconFile</key><string></string>
   <key>CFBundleIconName</key><string>AppIcon</string>
-  <key>CFBundleIdentifier</key><string>com.keystats.app.helper</string>
+  <key>CFBundleIdentifier</key><string>com.xuanlprk.KeyStatsMac.helper</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-  <key>CFBundleName</key><string>KeyStatsHelper</string>
+  <key>CFBundleName</key><string>KeyStatsMac Beta Helper</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+  <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>LSUIElement</key><true/>

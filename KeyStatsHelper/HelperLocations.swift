@@ -1,10 +1,10 @@
 import Foundation
 
 enum HelperLocations {
-    static let mainBundleId = "com.keystats.app"
-    static let helperBundleId = "com.keystats.app.helper"
-    static let machServiceName = "com.keystats.app.helper"
-    static let launchAgentLabel = "com.keystats.app.helper"
+    static let mainBundleId = "com.xuanlprk.KeyStatsMac"
+    static let helperBundleId = "com.xuanlprk.KeyStatsMac.helper"
+    static let machServiceName = "com.xuanlprk.KeyStatsMac.helper"
+    static let launchAgentLabel = "com.xuanlprk.KeyStatsMac.helper"
     static let interfaceVersion = 1
 
     static var installDir: URL {
@@ -14,7 +14,7 @@ enum HelperLocations {
             appropriateFor: nil,
             create: true
         )
-        return base.appendingPathComponent("KeyStats/Helper", isDirectory: true)
+        return base.appendingPathComponent("KeyStatsMac/Helper", isDirectory: true)
     }
 
     static var installedHelperURL: URL {

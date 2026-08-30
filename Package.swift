@@ -28,7 +28,6 @@ let package = Package(
                 "AllTimeStatsWindowController.swift",
                 "MouseDistanceCalibrationWindowController.swift",
                 "SettingsViewController.swift",
-                "AppActivityTracker.swift",
                 "AppStatsWindowController.swift",
                 "AppDelegate.swift",
                 "AnalyticsManager.swift",
@@ -52,6 +51,7 @@ let package = Package(
             ],
             sources: [
                 "AppStats.swift",
+                "AppActivityTracker.swift",
                 "StatsModels.swift",
                 "UpdateCheckCoordinator.swift",
                 "Sync/SyncModels.swift",
@@ -65,7 +65,7 @@ let package = Package(
             name: "KeyStatsCoreTests",
             dependencies: ["KeyStatsCore"],
             path: "KeyStatsTests",
-            sources: ["AppStatsTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
+            sources: ["AppStatsTests.swift", "AppActivityTrackerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
         )
     ]
 )

@@ -12,6 +12,9 @@ enum HelperPayloadFields {
     static let locationY = "locationY"
     static let scrollDX = "scrollDX"
     static let scrollDY = "scrollDY"
+    static let scrollPhase = "scrollPhase"
+    static let scrollMomentumPhase = "scrollMomentumPhase"
+    static let scrollIsContinuous = "scrollIsContinuous"
     static let sourcePID = "sourcePID"
     static let monotonicTime = "monotonicTime"
 }

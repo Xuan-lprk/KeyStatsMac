@@ -447,8 +447,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.52;
-				PRODUCT_BUNDLE_IDENTIFIER = com.keystats.app.helper;
+				MARKETING_VERSION = 1.52.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.xuanlprk.KeyStatsMac.helper;
 				PRODUCT_NAME = KeyStatsHelper;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -476,8 +476,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.52;
-				PRODUCT_BUNDLE_IDENTIFIER = com.keystats.app.helper;
+				MARKETING_VERSION = 1.52.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.xuanlprk.KeyStatsMac.helper;
 				PRODUCT_NAME = KeyStatsHelper;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -612,7 +612,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 50;
+				CURRENT_PROJECT_VERSION = 51;
 				DEVELOPMENT_TEAM = 228XJY7Z32;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -624,8 +624,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.52;
-				PRODUCT_BUNDLE_IDENTIFIER = com.keystats.app;
+				MARKETING_VERSION = 1.52.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.xuanlprk.KeyStatsMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -641,7 +641,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 50;
+				CURRENT_PROJECT_VERSION = 51;
 				DEVELOPMENT_TEAM = 228XJY7Z32;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -652,8 +652,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.52;
-				PRODUCT_BUNDLE_IDENTIFIER = com.keystats.app;
+				MARKETING_VERSION = 1.52.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.xuanlprk.KeyStatsMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

@@ -378,15 +378,13 @@ class StatsManager {
         statsStateLock.lock()
         ensureCurrentDayLocked()
         currentStats.keyPresses += 1
-        if let keyName = keyName {
-            let canonicalName = canonicalKeyName(keyName)
-            if !canonicalName.isEmpty {
-                currentStats.keyPressCounts[canonicalName, default: 0] += 1
-            }
+        let canonicalName = keyName.map(canonicalKeyName).flatMap { $0.isEmpty ? nil : $0 }
+        if let canonicalName {
+            currentStats.keyPressCounts[canonicalName, default: 0] += 1
         }
         if let appIdentity = appIdentity {
             updateAppStatsLocked(for: appIdentity) { stats in
-                stats.recordKeyPress()
+                stats.recordKeyPress(keyName: canonicalName)
             }
         }
         statsStateLock.unlock()
@@ -575,6 +573,19 @@ class StatsManager {
         if let appIdentity = appIdentity {
             updateAppStatsLocked(for: appIdentity) { stats in
                 stats.addScrollDistance(distance)
+            }
+        }
+        statsStateLock.unlock()
+        scheduleDebouncedStatsUpdate()
+    }
+
+    func incrementScrollSessions(appIdentity: AppIdentity? = nil) {
+        statsStateLock.lock()
+        ensureCurrentDayLocked()
+        currentStats.scrollSessions = aggregateScrollSessionCounts([currentStats.scrollSessions, 1])
+        if let appIdentity = appIdentity {
+            updateAppStatsLocked(for: appIdentity) { stats in
+                stats.recordScrollSession()
             }
         }
         statsStateLock.unlock()
@@ -1012,6 +1023,7 @@ class StatsManager {
         merged.sideForwardClicks = safeAdd(lhs.sideForwardClicks, rhs.sideForwardClicks)
         merged.mouseDistance = safeAddDistance(lhs.mouseDistance, rhs.mouseDistance)
         merged.scrollDistance = safeAddDistance(lhs.scrollDistance, rhs.scrollDistance)
+        merged.scrollSessions = aggregateScrollSessionCounts([lhs.scrollSessions, rhs.scrollSessions])
         merged.peakKPS = max(lhs.peakKPS, rhs.peakKPS)
         merged.peakCPS = max(lhs.peakCPS, rhs.peakCPS)
         merged.keyPressCounts = mergedCounterMap(lhs.keyPressCounts, rhs.keyPressCounts)
@@ -1050,11 +1062,16 @@ class StatsManager {
             if var existing = merged[bundleId] {
                 existing.bundleId = bundleId
                 existing.keyPresses = safeAdd(existing.keyPresses, importedStats.keyPresses)
+                existing.keyPressCounts = mergedCounterMap(existing.keyPressCounts, importedStats.keyPressCounts)
                 existing.leftClicks = safeAdd(existing.leftClicks, importedStats.leftClicks)
                 existing.rightClicks = safeAdd(existing.rightClicks, importedStats.rightClicks)
                 existing.sideBackClicks = safeAdd(existing.sideBackClicks, importedStats.sideBackClicks)
                 existing.sideForwardClicks = safeAdd(existing.sideForwardClicks, importedStats.sideForwardClicks)
                 existing.scrollDistance = safeAddDistance(existing.scrollDistance, importedStats.scrollDistance)
+                existing.scrollSessions = aggregateScrollSessionCounts([
+                    existing.scrollSessions,
+                    importedStats.scrollSessions
+                ])
 
                 let importedName = importedStats.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !importedName.isEmpty {
@@ -1100,6 +1117,7 @@ class StatsManager {
         normalized.sideForwardClicks = max(0, normalized.sideForwardClicks)
         normalized.mouseDistance = normalized.mouseDistance.isFinite ? max(0, normalized.mouseDistance) : 0
         normalized.scrollDistance = normalized.scrollDistance.isFinite ? max(0, normalized.scrollDistance) : 0
+        normalized.scrollSessions = max(0, normalized.scrollSessions)
         normalized.peakKPS = max(0, normalized.peakKPS)
         normalized.peakCPS = max(0, normalized.peakCPS)
         normalized.keyPressCounts = normalizedKeyPressCounts(normalized.keyPressCounts)
@@ -1119,11 +1137,13 @@ class StatsManager {
             var stats = value
             stats.bundleId = resolvedBundleId
             stats.keyPresses = max(0, stats.keyPresses)
+            stats.keyPressCounts = normalizedKeyPressCounts(stats.keyPressCounts)
             stats.leftClicks = max(0, stats.leftClicks)
             stats.rightClicks = max(0, stats.rightClicks)
             stats.sideBackClicks = max(0, stats.sideBackClicks)
             stats.sideForwardClicks = max(0, stats.sideForwardClicks)
             stats.scrollDistance = stats.scrollDistance.isFinite ? max(0, stats.scrollDistance) : 0
+            stats.scrollSessions = max(0, stats.scrollSessions)
             normalized[resolvedBundleId] = stats
         }
 
@@ -1650,6 +1670,10 @@ extension StatsManager {
         total.totalSideForwardClicks = safeAdd(total.totalSideForwardClicks, daily.sideForwardClicks)
         total.totalMouseDistance = safeAddDistance(total.totalMouseDistance, daily.mouseDistance)
         total.totalScrollDistance = safeAddDistance(total.totalScrollDistance, daily.scrollDistance)
+        total.totalScrollSessions = aggregateScrollSessionCounts([
+            total.totalScrollSessions,
+            daily.scrollSessions
+        ])
 
         for (key, count) in normalizedKeyPressCounts(daily.keyPressCounts) {
             total.keyPressCounts[key] = safeAdd(total.keyPressCounts[key] ?? 0, count)
@@ -1775,11 +1799,16 @@ extension StatsManager {
                 total.displayName = appStats.displayName
             }
             total.keyPresses += appStats.keyPresses
+            total.keyPressCounts = mergedCounterMap(total.keyPressCounts, appStats.keyPressCounts)
             total.leftClicks += appStats.leftClicks
             total.rightClicks += appStats.rightClicks
             total.sideBackClicks += appStats.sideBackClicks
             total.sideForwardClicks += appStats.sideForwardClicks
             total.scrollDistance += appStats.scrollDistance
+            total.scrollSessions = aggregateScrollSessionCounts([
+                total.scrollSessions,
+                appStats.scrollSessions
+            ])
             totals[bundleId] = total
         }
     }

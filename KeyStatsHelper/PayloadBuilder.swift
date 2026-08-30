@@ -30,6 +30,9 @@ enum PayloadBuilder {
         case .scrollWheel:
             p[HelperPayloadFields.scrollDX] = NSNumber(value: event.getDoubleValueField(.scrollWheelEventDeltaAxis2))
             p[HelperPayloadFields.scrollDY] = NSNumber(value: event.getDoubleValueField(.scrollWheelEventDeltaAxis1))
+            p[HelperPayloadFields.scrollPhase] = NSNumber(value: event.getIntegerValueField(.scrollWheelEventScrollPhase))
+            p[HelperPayloadFields.scrollMomentumPhase] = NSNumber(value: event.getIntegerValueField(.scrollWheelEventMomentumPhase))
+            p[HelperPayloadFields.scrollIsContinuous] = NSNumber(value: event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0)
 
         default:
             return nil

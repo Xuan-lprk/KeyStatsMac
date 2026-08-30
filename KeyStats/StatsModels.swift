@@ -453,6 +453,67 @@ func normalizedKeyboardHeatmapDisplayKey(_ rawKey: String) -> String? {
     }
 }
 
+enum ScrollEventPhase: Int64 {
+    case none = 0
+    case began = 1
+    case changed = 2
+    case ended = 4
+    case cancelled = 8
+    case mayBegin = 128
+}
+
+enum ScrollMomentumPhase: Int64 {
+    case none = 0
+    case began = 1
+    case changed = 2
+    case ended = 3
+}
+
+struct ScrollEventMetadata {
+    let phase: ScrollEventPhase
+    let momentumPhase: ScrollMomentumPhase
+    let isContinuous: Bool
+
+    init(scrollPhaseRaw: Int64, momentumPhaseRaw: Int64, isContinuous: Bool) {
+        phase = ScrollEventPhase(rawValue: scrollPhaseRaw) ?? .none
+        momentumPhase = ScrollMomentumPhase(rawValue: momentumPhaseRaw) ?? .none
+        self.isContinuous = isContinuous
+    }
+}
+
+enum ScrollSessionTransition: Equatable {
+    case none
+    case began
+    case completed
+    case cancelled
+}
+
+struct ScrollSessionTracker {
+    private(set) var isActive = false
+
+    mutating func consume(_ event: ScrollEventMetadata) -> ScrollSessionTransition {
+        switch event.phase {
+        case .began:
+            isActive = true
+            return .began
+        case .ended:
+            guard isActive else { return .none }
+            isActive = false
+            return .completed
+        case .cancelled:
+            let wasActive = isActive
+            isActive = false
+            return wasActive ? .cancelled : .none
+        case .none, .changed, .mayBegin:
+            return .none
+        }
+    }
+}
+
+func aggregateScrollSessionCounts(_ counts: [Int]) -> Int {
+    saturatingNonnegativeSum(counts)
+}
+
 /// 统计数据结构
 struct DailyStats: Codable {
     var date: Date
@@ -465,6 +526,7 @@ struct DailyStats: Codable {
     var sideForwardClicks: Int
     var mouseDistance: Double
     var scrollDistance: Double
+    var scrollSessions: Int
     var appStats: [String: AppStats]
     /// 今日峰值 KPS（trailing 1-second sliding-window count 的当日最大值）
     var peakKPS: Int
@@ -482,6 +544,7 @@ struct DailyStats: Codable {
         self.sideForwardClicks = 0
         self.mouseDistance = 0
         self.scrollDistance = 0
+        self.scrollSessions = 0
         self.appStats = [:]
         self.peakKPS = 0
         self.peakCPS = 0
@@ -498,6 +561,7 @@ struct DailyStats: Codable {
         self.sideForwardClicks = 0
         self.mouseDistance = 0
         self.scrollDistance = 0
+        self.scrollSessions = 0
         self.appStats = [:]
         self.peakKPS = 0
         self.peakCPS = 0
@@ -526,6 +590,7 @@ struct DailyStats: Codable {
         case otherClicks
         case mouseDistance
         case scrollDistance
+        case scrollSessions
         case appStats
         case peakKPS
         case peakCPS
@@ -546,6 +611,7 @@ struct DailyStats: Codable {
         }
         mouseDistance = try container.decodeIfPresent(Double.self, forKey: .mouseDistance) ?? 0
         scrollDistance = try container.decodeIfPresent(Double.self, forKey: .scrollDistance) ?? 0
+        scrollSessions = try container.decodeIfPresent(Int.self, forKey: .scrollSessions) ?? 0
         appStats = try container.decodeIfPresent([String: AppStats].self, forKey: .appStats) ?? [:]
         peakKPS = Self.decodeIntOrDouble(container: container, key: .peakKPS)
         peakCPS = Self.decodeIntOrDouble(container: container, key: .peakCPS)
@@ -563,6 +629,7 @@ struct DailyStats: Codable {
         try container.encode(sideForwardClicks, forKey: .sideForwardClicks)
         try container.encode(mouseDistance, forKey: .mouseDistance)
         try container.encode(scrollDistance, forKey: .scrollDistance)
+        try container.encode(scrollSessions, forKey: .scrollSessions)
         try container.encode(appStats, forKey: .appStats)
         try container.encode(peakKPS, forKey: .peakKPS)
         try container.encode(peakCPS, forKey: .peakCPS)
@@ -581,6 +648,7 @@ struct DailyStats: Codable {
             sideForwardClicks > 0 ||
             mouseDistance > 0 ||
             scrollDistance > 0 ||
+            scrollSessions > 0 ||
             !keyPressCounts.isEmpty ||
             !appStats.isEmpty
     }
@@ -614,6 +682,7 @@ struct AllTimeStats {
     var totalSideForwardClicks: Int
     var totalMouseDistance: Double
     var totalScrollDistance: Double
+    var totalScrollSessions: Int
     var keyPressCounts: [String: Int]
     var firstDate: Date?
     var lastDate: Date?
@@ -673,6 +742,7 @@ struct AllTimeStats {
             totalSideForwardClicks: 0,
             totalMouseDistance: 0,
             totalScrollDistance: 0,
+            totalScrollSessions: 0,
             keyPressCounts: [:],
             firstDate: nil,
             lastDate: nil,
