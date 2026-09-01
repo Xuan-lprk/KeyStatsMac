@@ -77,6 +77,50 @@ final class StatsModelsTests: XCTestCase {
         XCTAssertFalse(tracker.isActive)
     }
 
+    func testMomentumDoesNotCompleteAnActiveScrollSession() {
+        var tracker = ScrollSessionTracker()
+
+        XCTAssertEqual(tracker.consume(scrollEvent(.began)), .began)
+        XCTAssertEqual(tracker.consume(scrollEvent(.none, momentum: .began)), .none)
+        XCTAssertEqual(tracker.consume(scrollEvent(.none, momentum: .changed)), .none)
+        XCTAssertEqual(tracker.consume(scrollEvent(.none, momentum: .ended)), .none)
+        XCTAssertTrue(tracker.isActive)
+        XCTAssertEqual(tracker.consume(scrollEvent(.ended)), .completed)
+    }
+
+    func testMayBeginDoesNotActivateOrInterruptScrollSession() {
+        var tracker = ScrollSessionTracker()
+
+        XCTAssertEqual(tracker.consume(scrollEvent(.mayBegin)), .none)
+        XCTAssertFalse(tracker.isActive)
+        XCTAssertEqual(tracker.consume(scrollEvent(.began)), .began)
+        XCTAssertEqual(tracker.consume(scrollEvent(.mayBegin)), .none)
+        XCTAssertTrue(tracker.isActive)
+        XCTAssertEqual(tracker.consume(scrollEvent(.ended)), .completed)
+    }
+
+    func testSecondBeganBeforeEndedStillCompletesOnlyOneSession() {
+        var tracker = ScrollSessionTracker()
+
+        XCTAssertEqual(tracker.consume(scrollEvent(.began)), .began)
+        XCTAssertEqual(tracker.consume(scrollEvent(.began)), .began)
+        XCTAssertEqual(tracker.consume(scrollEvent(.ended)), .completed)
+        XCTAssertEqual(tracker.consume(scrollEvent(.ended)), .none)
+        XCTAssertFalse(tracker.isActive)
+    }
+
+    func testUnknownScrollPhaseRawValuesAreIgnored() {
+        var tracker = ScrollSessionTracker()
+        let event = ScrollEventMetadata(
+            scrollPhaseRaw: 999,
+            momentumPhaseRaw: 999,
+            isContinuous: true
+        )
+
+        XCTAssertEqual(tracker.consume(event), .none)
+        XCTAssertFalse(tracker.isActive)
+    }
+
     func testCancelledScrollSessionDoesNotComplete() {
         var tracker = ScrollSessionTracker()
 
@@ -125,6 +169,17 @@ final class StatsModelsTests: XCTestCase {
         XCTAssertEqual(stats.correctionRate, 0.3, accuracy: 0.0001)
     }
 
+    func testDailyStatsCorrectionRateIgnoresNegativePersistedCounts() {
+        var stats = DailyStats(date: Date())
+        stats.keyPresses = 10
+        stats.keyPressCounts = [
+            "Delete": -50,
+            "Command+ForwardDelete": 2
+        ]
+
+        XCTAssertEqual(stats.correctionRate, 0.2, accuracy: 0.0001)
+    }
+
     func testDailyStatsInputRatioHandlesZeroClicks() {
         var stats = DailyStats(date: Date())
         stats.keyPresses = 8
@@ -164,6 +219,46 @@ final class StatsModelsTests: XCTestCase {
         XCTAssertEqual(decoded.totalClicks, 7)
         XCTAssertEqual(decoded.mouseDistance, 15.5, accuracy: 0.0001)
         XCTAssertEqual(decoded.scrollSessions, 0)
+    }
+
+    func testDailyStatsDecodeMissingFieldsUsesSafeDefaults() throws {
+        let decoded = try JSONDecoder().decode(DailyStats.self, from: Data("{}".utf8))
+
+        XCTAssertEqual(decoded.keyPresses, 0)
+        XCTAssertEqual(decoded.keyPressCounts, [:])
+        XCTAssertEqual(decoded.totalClicks, 0)
+        XCTAssertEqual(decoded.mouseDistance, 0)
+        XCTAssertEqual(decoded.scrollDistance, 0)
+        XCTAssertEqual(decoded.scrollSessions, 0)
+        XCTAssertTrue(decoded.appStats.isEmpty)
+        XCTAssertEqual(decoded.peakKPS, 0)
+        XCTAssertEqual(decoded.peakCPS, 0)
+        XCTAssertFalse(decoded.hasAnyActivity)
+    }
+
+    func testDailyStatsDecodesLegacyDoubleAndCurrentIntegerPeaks() throws {
+        let json = #"{"peakKPS":12.75,"peakCPS":4}"#.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(DailyStats.self, from: json)
+
+        XCTAssertEqual(decoded.peakKPS, 12)
+        XCTAssertEqual(decoded.peakCPS, 4)
+    }
+
+    func testDailyStatsExplicitSideClicksOverrideLegacyOtherClicks() throws {
+        let json = #"{"sideBackClicks":2,"sideForwardClicks":3,"otherClicks":100}"#.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(DailyStats.self, from: json)
+
+        XCTAssertEqual(decoded.sideBackClicks, 2)
+        XCTAssertEqual(decoded.sideForwardClicks, 3)
+        XCTAssertEqual(decoded.totalClicks, 5)
+    }
+
+    func testDailyStatsDecodeRejectsMalformedCounterType() {
+        let json = #"{"keyPresses":"12"}"#.data(using: .utf8)!
+
+        XCTAssertThrowsError(try JSONDecoder().decode(DailyStats.self, from: json))
     }
 
     func testDailyStatsScrollSessionsCodableRoundTrip() throws {
@@ -339,6 +434,33 @@ final class StatsModelsTests: XCTestCase {
         XCTAssertEqual(counts["A"], 9)
         XCTAssertNil(counts["LeftCmd+C"])
         XCTAssertNil(counts["RightShift"])
+    }
+
+    func testKeyBreakdownCanonicalizesAliasesLiteralPlusAndDuplicateParts() {
+        let counts = keyBreakdownDisplayCounts(from: [
+            "Function+A": 2,
+            "Fn+A": 3,
+            "LeftCmd+LeftCmd+B": 4,
+            "Cmd++": 5,
+            "A": -100
+        ])
+
+        XCTAssertEqual(counts["Fn+A"], 5)
+        XCTAssertEqual(counts["Cmd+B"], 4)
+        XCTAssertEqual(counts["Cmd++"], 5)
+        XCTAssertNil(counts["A"])
+    }
+
+    func testKeyboardHeatmapIgnoresNonpositiveCountsWithoutErasingValidCounts() {
+        let counts = keyboardHeatmapCounts(from: [
+            "LeftCmd+A": 2,
+            "A": -100,
+            "B": 0
+        ])
+
+        XCTAssertEqual(counts["LeftCmd"], 2)
+        XCTAssertEqual(counts["A"], 2)
+        XCTAssertNil(counts["B"])
     }
 
     func testModifierStandaloneTrackerUsesSideSpecificRawFlagsWhenKeyCodeLooksGeneric() {

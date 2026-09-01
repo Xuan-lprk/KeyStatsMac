@@ -15,6 +15,9 @@ class MenuBarController {
     private var popover: NSPopover!
     private var eventMonitor: Any?
     private let dynamicIconColorStyleKey = "dynamicIconColorStyle"
+    private let menuBarUpdateInterval: TimeInterval = 0.1
+    private var pendingMenuBarUpdate: DispatchWorkItem?
+    private var lastMenuBarUpdateTime: TimeInterval = 0
 
     init() {
         setupStatusItem()
@@ -22,12 +25,13 @@ class MenuBarController {
         setupPopover()
         setupEventMonitor()
         StatsManager.shared.menuBarUpdateHandler = { [weak self] in
-            self?.updateMenuBarText()
+            self?.scheduleMenuBarUpdate()
         }
     }
 
     deinit {
         StatsManager.shared.menuBarUpdateHandler = nil
+        pendingMenuBarUpdate?.cancel()
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
         }
@@ -151,14 +155,38 @@ class MenuBarController {
         popover.performClose(nil)
     }
 
-    @objc private func updateMenuBarText() {
-        if Thread.isMainThread {
-            updateMenuBarAppearance()
-        } else {
+    private func scheduleMenuBarUpdate() {
+        guard Thread.isMainThread else {
             DispatchQueue.main.async { [weak self] in
-                self?.updateMenuBarAppearance()
+                self?.scheduleMenuBarUpdate()
             }
+            return
         }
+
+        guard pendingMenuBarUpdate == nil else { return }
+
+        let now = ProcessInfo.processInfo.systemUptime
+        let elapsed = now - lastMenuBarUpdateTime
+        guard elapsed < menuBarUpdateInterval else {
+            performMenuBarUpdate()
+            return
+        }
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingMenuBarUpdate = nil
+            self.performMenuBarUpdate()
+        }
+        pendingMenuBarUpdate = workItem
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + (menuBarUpdateInterval - elapsed),
+            execute: workItem
+        )
+    }
+
+    private func performMenuBarUpdate() {
+        lastMenuBarUpdateTime = ProcessInfo.processInfo.systemUptime
+        updateMenuBarAppearance()
     }
 
     // MARK: - 菜单栏显示样式

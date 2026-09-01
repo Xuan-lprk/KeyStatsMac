@@ -1,5 +1,7 @@
 # macOS KPS/CPS 实现审查与优化建议
 
+> 状态：**Historical / Superseded**。本文基于已经删除的主 App `InputMonitor` 架构；保留作历史审查记录，任何结论都必须对照当前 Helper → XPC → `RemoteEventProcessor` → `StatsManager` 实现重新验证。
+
 日期：2026-04-06  
 范围：仅评审 macOS 当前实现（`KeyStats/`）中的 KPS/CPS 逻辑  
 目标读者：开发者本人，直接按文档执行优化

@@ -51,4 +51,32 @@ final class AppActivityTrackerTests: XCTestCase {
             AppIdentity(bundleId: "com.test.new", displayName: "New App")
         )
     }
+
+    func testTerminationWithoutBundleIdentifierStillRemovesPID() {
+        var cache = PIDAppIdentityCache()
+        let terminatedPID: pid_t = 401
+
+        cache.store(bundleId: "com.test.app", displayName: "Test App", forPID: terminatedPID)
+
+        XCTAssertTrue(cache.removePID(terminatedPID, matchingBundleId: nil))
+        XCTAssertNil(cache.identity(forPID: terminatedPID))
+    }
+
+    func testUpdatedDisplayNameIsReusedWithoutKeepingTerminatedPID() {
+        var cache = PIDAppIdentityCache()
+        let oldPID: pid_t = 501
+        let newPID: pid_t = 502
+
+        cache.store(bundleId: "com.test.app", displayName: "Old Name", forPID: oldPID)
+        cache.storeDisplayName("New Name", forBundleId: "com.test.app")
+        XCTAssertTrue(cache.removePID(oldPID, matchingBundleId: "com.test.app"))
+
+        cache.store(bundleId: "com.test.app", displayName: "", forPID: newPID)
+
+        XCTAssertNil(cache.identity(forPID: oldPID))
+        XCTAssertEqual(
+            cache.identity(forPID: newPID),
+            AppIdentity(bundleId: "com.test.app", displayName: "New Name")
+        )
+    }
 }

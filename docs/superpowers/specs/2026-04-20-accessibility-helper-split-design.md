@@ -2,7 +2,7 @@
 
 - 日期：2026-04-20
 - 作者：tian / Claude
-- 状态：Reviewed —— 待进入 implementation planning
+- 状态：**Implemented / Historical** —— Helper/XPC 架构已落地；旧 identifier、签名约束和中间方案仅供历史参考
 - 范围：macOS KeyStats（未签名发行版），目标 `MACOSX_DEPLOYMENT_TARGET = 13.0`，bundle id `com.keystats.app`
 
 ## 1. 背景与痛点

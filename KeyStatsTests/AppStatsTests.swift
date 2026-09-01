@@ -97,6 +97,15 @@ final class AppStatsTests: XCTestCase {
         XCTAssertEqual(second.scrollSessions, 1)
     }
 
+    func testRecordScrollSessionSaturatesAtIntMax() {
+        var stats = AppStats(bundleId: "com.test.app", displayName: "Test App")
+        stats.scrollSessions = Int.max
+
+        stats.recordScrollSession()
+
+        XCTAssertEqual(stats.scrollSessions, Int.max)
+    }
+
     func testUpdateDisplayNameIgnoresEmptyName() {
         var stats = AppStats(bundleId: "com.test.app", displayName: "Original")
 
@@ -214,5 +223,11 @@ final class AppStatsTests: XCTestCase {
         XCTAssertEqual(decoded.scrollDistance, 0)
         XCTAssertEqual(decoded.scrollSessions, 0)
         XCTAssertFalse(decoded.hasActivity)
+    }
+
+    func testDecodeRejectsMalformedCounterType() {
+        let json = #"{"bundleId":"com.test.app","keyPresses":"12"}"#.data(using: .utf8)!
+
+        XCTAssertThrowsError(try JSONDecoder().decode(AppStats.self, from: json))
     }
 }

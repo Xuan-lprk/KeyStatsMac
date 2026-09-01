@@ -20,6 +20,7 @@ DerivedData/
 xcuserdata/
 *.xccheckout
 *.xcscmblueprint
+*.xcresult
 
 # SwiftPM
 .build/
@@ -40,6 +41,18 @@ fastlane/test_output
 # Archives
 *.xcarchive
 .entire/logs/entire.log
+
+# Local diagnostics and benchmark artifacts
+*.trace
+*.tracev3
+*.spindump
+*.sample
+*.log
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
 # Claude
 .claude/settings.json

@@ -1,5 +1,7 @@
 # Accessibility Helper Split Implementation Plan
 
+> Status: **Implemented / Historical**. The production architecture now uses `KeyStatsHelper` + CGEventTap + XPC, but many identifiers, payload paths, feature-flag steps, and intermediate file names below were superseded. Use current source and `AGENTS.md` for operational work.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Split KeyStats's accessibility-privileged event tap out of the main app into a long-lived helper (`KeyStatsHelper`) whose cdhash stays stable across main-app upgrades, so users authorize once and never revisit System Settings.

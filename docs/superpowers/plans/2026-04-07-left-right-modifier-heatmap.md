@@ -1,5 +1,7 @@
 # Left/Right Modifier Heatmap Implementation Plan
 
+> Status: **Implemented / Historical**. Current code already records side-specific modifier names while retaining legacy-data compatibility; the `InputMonitor.swift` steps below describe the pre-Helper architecture.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Distinguish left and right `Shift`, `Option`, and `Cmd` keys in the keyboard heatmap and count them independently for newly collected data.

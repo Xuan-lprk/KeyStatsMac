@@ -1,5 +1,7 @@
 # Helper 拆分首发版本 — 发布说明模板
 
+> 状态：**Historical**。这是 upstream 首次引入 Helper 时的一次性发布模板，不是当前 KeyStatsMac 的常规发布说明或发布 checklist。
+
 > 这份模板用于首次发布包含 `KeyStatsHelper` 的版本。之后常规升级不需要重复这段内容。
 
 ## Appcast / GitHub Release 文案（English）

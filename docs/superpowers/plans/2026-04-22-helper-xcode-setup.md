@@ -1,5 +1,7 @@
 # KeyStatsHelper Xcode 配置说明
 
+> 状态：**Superseded / Historical**。本文保留 Helper target 与 synchronized group 的演进背景；其中 `com.keystats.app*` identifier、ad-hoc Debug 签名及部分 target 归属说明不代表当前工程配置。
+
 > 配合 `2026-04-20-accessibility-helper-split.md` 的 MVP 实现使用。
 
 ## 最终项目结构

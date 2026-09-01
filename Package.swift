@@ -9,7 +9,12 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "PostHog",
+            path: "KeyStatsTestSupport/PostHog"
+        ),
+        .target(
             name: "KeyStatsCore",
+            dependencies: ["PostHog"],
             path: "KeyStats",
             exclude: [
                 "Assets.xcassets",
@@ -30,7 +35,6 @@ let package = Package(
                 "SettingsViewController.swift",
                 "AppStatsWindowController.swift",
                 "AppDelegate.swift",
-                "AnalyticsManager.swift",
                 "MenuBarController.swift",
                 "AllTimeStatsViewController.swift",
                 "MainWindowController.swift",
@@ -53,6 +57,7 @@ let package = Package(
                 "AppStats.swift",
                 "AppActivityTracker.swift",
                 "StatsModels.swift",
+                "AnalyticsManager.swift",
                 "UpdateCheckCoordinator.swift",
                 "Sync/SyncModels.swift",
                 "Sync/SyncCrypto.swift",
@@ -63,9 +68,9 @@ let package = Package(
         ),
         .testTarget(
             name: "KeyStatsCoreTests",
-            dependencies: ["KeyStatsCore"],
+            dependencies: ["KeyStatsCore", "PostHog"],
             path: "KeyStatsTests",
-            sources: ["AppStatsTests.swift", "AppActivityTrackerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
+            sources: ["AppStatsTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
         )
     ]
 )
