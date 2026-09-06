@@ -2,6 +2,18 @@
 
 本文档是面向 Codex/AI Agent 的项目操作手册。所有判断以当前源码为准；如果本文档与实现不一致，先核对代码，再以最小范围修正文档或实现。仓库内更深层目录若存在自己的 `AGENTS.md`，该目录下的工作同时受更具体规则约束。
 
+## 默认沟通格式
+
+开始处理任务时，先用 5 行以内告诉用户：
+
+1. 发现了什么；
+2. 要不要做；
+3. 风险大不大；
+4. 会改哪些东西；
+5. 下一步是什么。
+
+然后再给技术细节。
+
 ## 项目定位
 
 KeyStats 是 macOS 13+ 原生菜单栏应用，主工程使用 Swift 5、AppKit，并在部分界面嵌入 SwiftUI。产品正在从键鼠计数器逐步发展为：
@@ -128,6 +140,9 @@ macOS input events
   - 通过 `UserDefaults` 保存 JSON 编码的当前数据与历史。
   - 使用锁、snapshot、延迟保存、UI 更新合并和午夜切日逻辑。
   - 区分本机可写历史与包含远端 shard 的显示快照。
+- `KeyStats/StatsManagerLiveEnvironment.swift`
+  - 为正式 App 提供 `StatsManager.shared`，并连接通知、Sync 展示和真实运行时依赖。
+  - SwiftPM 测试不编译该文件，而是通过 `StatsManager.Environment` 创建隔离实例。
 - `KeyStats/MenuBarController.swift`
   - 管理 `NSStatusItem`、`NSPopover`、右键菜单和菜单栏更新。
   - 当前菜单栏视图已经使用 `NSHostingView` 嵌入 SwiftUI，但 shell 仍为 AppKit。
@@ -257,9 +272,10 @@ xcodebuild \
 当前自动测试事实：
 
 - `Package.swift` 定义 `KeyStatsCore` 和 `KeyStatsCoreTests`。
-- `KeyStatsTests/` 当前包含 `AppStatsTests`、`StatsModelsTests`、`SyncCoreTests`、`UpdateCheckCoordinatorTests`。
-- 本次文档审阅时共发现 61 个 XCTest；这是当前快照，不是永久数量保证。
-- SwiftPM 测试只编译 `Package.swift` 明确列出的 Core 文件，不覆盖 AppDelegate、Analytics、Helper、XPC、权限、完整 `StatsManager` 或 UI 行为。
+- `KeyStatsTests/` 当前覆盖模型、App attribution、Analytics consent、`StatsManager` 的本地持久化/导入/合并/历史、同步核心和更新检查协调逻辑。
+- 本次文档更新时共发现 107 个 XCTest；这是当前快照，不是永久数量保证。
+- SwiftPM 会编译真实 `StatsManager.swift`，测试通过独立 `UserDefaults`、固定时间和关闭自动调度的 environment 创建隔离实例。
+- SwiftPM 不编译 App-only 的 `StatsManagerLiveEnvironment.swift`，也不覆盖 AppDelegate、Helper、XPC、TCC/权限或实际 UI 行为。
 
 每次实现完成后至少：
 

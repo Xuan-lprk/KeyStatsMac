@@ -26,7 +26,7 @@ let package = Package(
                 "AppStatsViewController.swift",
                 "KeyStats.entitlements",
                 "NotificationManager.swift",
-                "StatsManager.swift",
+                "StatsManagerLiveEnvironment.swift",
                 "HoverIconButton.swift",
                 "MouseDistanceCalibrationViewController.swift",
                 "ActivityHeatmapView.swift",
@@ -57,6 +57,7 @@ let package = Package(
                 "AppStats.swift",
                 "AppActivityTracker.swift",
                 "StatsModels.swift",
+                "StatsManager.swift",
                 "AnalyticsManager.swift",
                 "UpdateCheckCoordinator.swift",
                 "Sync/SyncModels.swift",
@@ -70,7 +71,7 @@ let package = Package(
             name: "KeyStatsCoreTests",
             dependencies: ["KeyStatsCore", "PostHog"],
             path: "KeyStatsTests",
-            sources: ["AppStatsTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
+            sources: ["AppStatsTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
         )
     ]
 )

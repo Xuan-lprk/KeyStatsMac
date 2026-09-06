@@ -1,6 +1,5 @@
 import Foundation
 import Cocoa
-import UserNotifications
 
 private func canonicalKeyPart(_ rawKeyPart: String) -> String {
     let trimmed = rawKeyPart.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -51,37 +50,29 @@ private func canonicalKeyName(_ keyName: String) -> String {
     return orderedComponents.joined(separator: "+")
 }
 
-extension DailyStats {
-    var formattedMouseDistance: String {
-        StatsManager.shared.formatMouseDistance(mouseDistance)
-    }
-
-    var formattedScrollDistance: String {
-        if scrollDistance >= 10000 {
-            return String(format: "%.1f kPx", scrollDistance / 1000)
-        } else {
-            return String(format: "%.0f px", scrollDistance)
-        }
-    }
-}
-
-extension AllTimeStats {
-    var formattedMouseDistance: String {
-        StatsManager.shared.formatMouseDistance(totalMouseDistance)
-    }
-
-    var formattedScrollDistance: String {
-        if totalScrollDistance >= 10000 {
-            return String(format: "%.1f kPx", totalScrollDistance / 1000)
-        } else {
-            return String(format: "%.0f px", totalScrollDistance)
-        }
-    }
-}
-
 /// 统计数据管理器 - 单例模式
 class StatsManager {
-    static let shared = StatsManager()
+    enum ThresholdMetric {
+        case keyPresses
+        case clicks
+    }
+
+    struct SyncDisplayContext {
+        let deviceId: String
+        let remoteSnapshots: [CoreDaySnapshotV1]
+    }
+
+    struct Environment {
+        let userDefaults: UserDefaults
+        let now: () -> Date
+        let calendar: () -> Calendar
+        let makeDateKeyFormatter: () -> DateFormatter
+        let notificationCenter: NotificationCenter
+        let schedulesAutomaticWork: Bool
+        let blocksLegacyImport: () -> Bool
+        let syncDisplayContext: () -> SyncDisplayContext?
+        let sendThresholdNotification: (ThresholdMetric, Int, Int) -> Void
+    }
 
     enum ImportMode {
         case overwrite
@@ -93,7 +84,8 @@ class StatsManager {
         case failure(pixels: Double)
     }
     
-    private let userDefaults = UserDefaults.standard
+    private let environment: Environment
+    private var userDefaults: UserDefaults { environment.userDefaults }
     private let statsKey = "dailyStats"
     private let historyKey = "dailyStatsHistory"
     private let showKeyPressesKey = "showKeyPressesInMenuBar"
@@ -297,25 +289,26 @@ class StatsManager {
     /// 上次鼠标位置（用于计算移动距离）
     var lastMousePosition: NSPoint?
     
-    private init() {
-        dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
+    init(environment: Environment) {
+        self.environment = environment
+        let defaults = environment.userDefaults
+        dateFormatter = environment.makeDateKeyFormatter()
 
         // 加载设置（按键/点击默认 true，通知/动态图标默认 false）
-        showKeyPressesInMenuBar = userDefaults.object(forKey: showKeyPressesKey) as? Bool ?? true
-        showMouseClicksInMenuBar = userDefaults.object(forKey: showMouseClicksKey) as? Bool ?? true
-        minimalMenuBarMode = userDefaults.object(forKey: minimalMenuBarModeKey) as? Bool ?? false
-        appStatsEnabled = userDefaults.object(forKey: appStatsEnabledKey) as? Bool ?? true
-        notificationsEnabled = userDefaults.object(forKey: notificationsEnabledKey) as? Bool ?? false
-        keyPressNotifyThreshold = userDefaults.object(forKey: keyPressNotifyThresholdKey) as? Int ?? 1000
-        clickNotifyThreshold = userDefaults.object(forKey: clickNotifyThresholdKey) as? Int ?? 1000
-        enableDynamicIconColor = userDefaults.object(forKey: enableDynamicIconColorKey) as? Bool ?? false
-        let storedCalibration = userDefaults.double(forKey: mouseDistanceCalibrationFactorKey)
+        showKeyPressesInMenuBar = defaults.object(forKey: showKeyPressesKey) as? Bool ?? true
+        showMouseClicksInMenuBar = defaults.object(forKey: showMouseClicksKey) as? Bool ?? true
+        minimalMenuBarMode = defaults.object(forKey: minimalMenuBarModeKey) as? Bool ?? false
+        appStatsEnabled = defaults.object(forKey: appStatsEnabledKey) as? Bool ?? true
+        notificationsEnabled = defaults.object(forKey: notificationsEnabledKey) as? Bool ?? false
+        keyPressNotifyThreshold = defaults.object(forKey: keyPressNotifyThresholdKey) as? Int ?? 1000
+        clickNotifyThreshold = defaults.object(forKey: clickNotifyThresholdKey) as? Int ?? 1000
+        enableDynamicIconColor = defaults.object(forKey: enableDynamicIconColorKey) as? Bool ?? false
+        let storedCalibration = defaults.double(forKey: mouseDistanceCalibrationFactorKey)
         cachedMouseDistanceCalibrationFactor = storedCalibration > 0 ? storedCalibration : 1.0
 
         // 先初始化 currentStats 为默认值
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let calendar = environment.calendar()
+        let today = calendar.startOfDay(for: environment.now())
         currentStats = DailyStats(date: today)
         history = normalizedHistory(loadHistory())
 
@@ -334,20 +327,32 @@ class StatsManager {
         
         isReadyForUpdates = true
         saveStats()
-        if enableDynamicIconColor {
+        if environment.schedulesAutomaticWork, enableDynamicIconColor {
             resetInputRateBuckets()
             startInputRateTracking()
             updateCurrentInputRate()
         }
-        setupMidnightReset()
-        remoteCacheObserver = NotificationCenter.default.addObserver(
-            forName: .syncRemoteCacheDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self else { return }
-            self.notifyMenuBarUpdate()
-            self.notifyStatsUpdate()
+        if environment.schedulesAutomaticWork {
+            setupMidnightReset()
+            remoteCacheObserver = environment.notificationCenter.addObserver(
+                forName: .syncRemoteCacheDidChange,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                self.notifyMenuBarUpdate()
+                self.notifyStatsUpdate()
+            }
+        }
+    }
+
+    deinit {
+        saveTimer?.invalidate()
+        statsUpdateTimer?.invalidate()
+        midnightCheckTimer?.invalidate()
+        inputRateTimer?.invalidate()
+        if let remoteCacheObserver {
+            environment.notificationCenter.removeObserver(remoteCacheObserver)
         }
     }
     
@@ -708,6 +713,7 @@ class StatsManager {
     }
 
     private func startInputRateTracking() {
+        guard environment.schedulesAutomaticWork else { return }
         if !Thread.isMainThread {
             DispatchQueue.main.async { [weak self] in
                 self?.startInputRateTracking()
@@ -715,7 +721,7 @@ class StatsManager {
             return
         }
 
-        inputRateStartTime = Date()
+        inputRateStartTime = environment.now()
         inputRateTimer?.invalidate()
         inputRateTimer = Timer.scheduledTimer(withTimeInterval: inputRateBucketInterval, repeats: true) { [weak self] _ in
             self?.advanceInputRateBucket()
@@ -747,7 +753,7 @@ class StatsManager {
         var effectiveWindow = inputRateWindowSeconds
         // Adjust window for initial ramp-up to avoid diluted rates when monitoring just started
         if let startTime = inputRateStartTime {
-            let elapsed = Date().timeIntervalSince(startTime)
+            let elapsed = environment.now().timeIntervalSince(startTime)
             if elapsed < effectiveWindow {
                 effectiveWindow = max(inputRateBucketInterval, elapsed)
             }
@@ -829,7 +835,7 @@ class StatsManager {
         guard count % threshold == 0 else { return }
         guard count != lastNotifiedKeyPresses else { return }
         lastNotifiedKeyPresses = count
-        NotificationManager.shared.sendThresholdNotification(metric: .keyPresses, count: count, threshold: threshold)
+        environment.sendThresholdNotification(.keyPresses, count, threshold)
     }
 
     private func notifyClickThresholdIfNeeded() {
@@ -840,7 +846,7 @@ class StatsManager {
         guard count % threshold == 0 else { return }
         guard count != lastNotifiedClicks else { return }
         lastNotifiedClicks = count
-        NotificationManager.shared.sendThresholdNotification(metric: .clicks, count: count, threshold: threshold)
+        environment.sendThresholdNotification(.clicks, count, threshold)
     }
     
     // MARK: - 数据持久化
@@ -848,7 +854,7 @@ class StatsManager {
     private func saveStats() {
         statsStateLock.lock()
         let statsSnapshot = currentStats
-        let calendar = Calendar.current
+        let calendar = environment.calendar()
         let normalizedDate = calendar.startOfDay(for: statsSnapshot.date)
         let key = dateFormatter.string(from: normalizedDate)
         var normalizedStats = statsSnapshot
@@ -916,7 +922,7 @@ class StatsManager {
         var exportHistory = history
         var current = currentStats
         statsStateLock.unlock()
-        let normalizedDate = Calendar.current.startOfDay(for: current.date)
+        let normalizedDate = environment.calendar().startOfDay(for: current.date)
         current.date = normalizedDate
         let key = dateFormatter.string(from: normalizedDate)
         exportHistory[key] = current
@@ -924,7 +930,7 @@ class StatsManager {
         let payload = ExportPayload(
             version: 1,
             scope: "currentDevice",
-            exportedAt: Date(),
+            exportedAt: environment.now(),
             currentStats: current,
             history: exportHistory
         )
@@ -935,7 +941,7 @@ class StatsManager {
     }
 
     func importStatsData(from data: Data, mode: ImportMode = .overwrite) throws {
-        guard !SyncCoordinator.shared.blocksLegacyImport else { throw ImportError.syncEnabled }
+        guard !environment.blocksLegacyImport() else { throw ImportError.syncEnabled }
         guard !data.isEmpty else { throw ImportError.emptyData }
 
         let decoder = JSONDecoder()
@@ -961,7 +967,7 @@ class StatsManager {
         let importedCurrent = normalizedDailyStats(payload.currentStats)
         importedHistory[dateFormatter.string(from: importedCurrent.date)] = importedCurrent
 
-        let today = Calendar.current.startOfDay(for: Date())
+        let today = environment.calendar().startOfDay(for: environment.now())
         let todayKey = dateFormatter.string(from: today)
         let resolvedHistory: [String: DailyStats]
         switch mode {
@@ -1108,7 +1114,7 @@ class StatsManager {
 
     private func normalizedDailyStats(_ stats: DailyStats) -> DailyStats {
         var normalized = stats
-        normalized.date = Calendar.current.startOfDay(for: normalized.date)
+        normalized.date = environment.calendar().startOfDay(for: normalized.date)
         normalized.keyPresses = max(0, normalized.keyPresses)
         normalized.leftClicks = max(0, normalized.leftClicks)
         normalized.rightClicks = max(0, normalized.rightClicks)
@@ -1151,6 +1157,7 @@ class StatsManager {
     }
 
     private func scheduleSave() {
+        guard environment.schedulesAutomaticWork else { return }
         let schedule = { [weak self] in
             guard let self = self, self.saveTimer == nil else { return }
             self.saveTimer = Timer.scheduledTimer(withTimeInterval: self.saveInterval, repeats: false) { [weak self] _ in
@@ -1195,6 +1202,7 @@ class StatsManager {
 
     private func scheduleDebouncedStatsUpdate() {
         guard !statsUpdateHandlers.isEmpty else { return }
+        guard environment.schedulesAutomaticWork else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             // 取消旧的 timer，实现真正的防抖
@@ -1221,17 +1229,19 @@ class StatsManager {
     // MARK: - 午夜重置
 
     private func setupMidnightReset() {
+        guard environment.schedulesAutomaticWork else { return }
         scheduleNextMidnightReset()
     }
 
     private func scheduleNextMidnightReset() {
+        guard environment.schedulesAutomaticWork else { return }
         let doSchedule = { [weak self] in
             guard let self = self else { return }
             self.midnightCheckTimer?.invalidate()
 
             // 使用日历计算下一次午夜，避免睡眠/时区变化导致的漂移
-            let calendar = Calendar.current
-            let now = Date()
+            let calendar = self.environment.calendar()
+            let now = self.environment.now()
             guard let nextMidnight = calendar.nextDate(
                 after: now,
                 matching: DateComponents(hour: 0, minute: 0, second: 0),
@@ -1261,12 +1271,12 @@ class StatsManager {
     }
 
     private func performMidnightReset() {
-        let now = Date()
+        let now = environment.now()
         print("🌙 午夜重置触发：\(now)")
 
         var didReset = false
         statsStateLock.lock()
-        if !Calendar.current.isDate(currentStats.date, inSameDayAs: now) {
+        if !environment.calendar().isDate(currentStats.date, inSameDayAs: now) {
             resetStatsLocked(for: now)
             didReset = true
         }
@@ -1283,7 +1293,7 @@ class StatsManager {
     
     func resetStats() {
         statsStateLock.lock()
-        resetStatsLocked(for: Date())
+        resetStatsLocked(for: environment.now())
         statsStateLock.unlock()
         updateNotificationBaselines()
         notifyMenuBarUpdate()
@@ -1292,8 +1302,8 @@ class StatsManager {
 
     /// 调用前必须持有 statsStateLock
     private func ensureCurrentDayLocked() {
-        let now = Date()
-        if !Calendar.current.isDate(currentStats.date, inSameDayAs: now) {
+        let now = environment.now()
+        if !environment.calendar().isDate(currentStats.date, inSameDayAs: now) {
             resetStatsLocked(for: now)
         }
     }
@@ -1399,8 +1409,8 @@ extension StatsManager {
     /// 起始日取「首次出现键盘数据」与今天之间的最早日期；若没有任何键盘数据则今天=起始日。
     func keyboardHeatmapDateBounds() -> (start: Date, end: Date) {
         assert(Thread.isMainThread)
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let calendar = environment.calendar()
+        let today = calendar.startOfDay(for: environment.now())
 
         var earliestDate: Date?
 
@@ -1425,7 +1435,7 @@ extension StatsManager {
     /// 组合键（如 Cmd+A）会拆分并分别累加到各个按键：Cmd +1、A +1。
     func keyboardHeatmapDay(for date: Date) -> KeyboardHeatmapDay {
         assert(Thread.isMainThread)
-        let normalizedDate = Calendar.current.startOfDay(for: date)
+        let normalizedDate = environment.calendar().startOfDay(for: date)
         let dayKey = dateFormatter.string(from: normalizedDate)
         let daily = displayHistorySnapshot()[dayKey] ?? DailyStats(date: normalizedDate)
         let aggregated = keyboardHeatmapCounts(from: daily.keyPressCounts)
@@ -1451,20 +1461,18 @@ extension StatsManager {
             break
         }
 
-        let syncState = SyncCoordinator.shared.state
-        guard syncState.isConfigured, !syncState.needsRepair else {
+        guard let syncContext = environment.syncDisplayContext() else {
             return HistoryTrendSeries(display: localSeries, local: nil)
         }
 
-        let remote = RemoteShardCache.shared.snapshots(excludingDeviceId: syncState.deviceId)
-        guard !remote.isEmpty else {
+        guard !syncContext.remoteSnapshots.isEmpty else {
             return HistoryTrendSeries(display: localSeries, local: nil)
         }
 
         let displayHistory = DisplayStatsAggregator.aggregate(
             local: localHistory,
-            remote: remote,
-            currentDeviceId: syncState.deviceId
+            remote: syncContext.remoteSnapshots,
+            currentDeviceId: syncContext.deviceId
         )
         return HistoryTrendSeries(
             display: makeHistorySeries(dates: dates, metric: metric, history: displayHistory),
@@ -1501,8 +1509,8 @@ extension StatsManager {
     /// 缺失日期填充为 0
     func heatmapActivityData() -> [(date: Date, keyPresses: Int, clicks: Int)] {
         assert(Thread.isMainThread)
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let calendar = environment.calendar()
+        let today = calendar.startOfDay(for: environment.now())
 
         // 计算本周周起始日
         let todayWeekday = calendar.component(.weekday, from: today)
@@ -1542,8 +1550,8 @@ extension StatsManager {
     }
     
     private func datesInRange(_ range: HistoryRange) -> [Date] {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let calendar = environment.calendar()
+        let today = calendar.startOfDay(for: environment.now())
         
         let startDate: Date
         switch range {
@@ -1642,22 +1650,22 @@ extension StatsManager {
         statsStateLock.lock()
         let local = currentStats
         statsStateLock.unlock()
-        let syncState = SyncCoordinator.shared.state
-        guard syncState.isConfigured, !syncState.needsRepair else { return local }
-        let remote = RemoteShardCache.shared.snapshots(excludingDeviceId: syncState.deviceId)
+        guard let syncContext = environment.syncDisplayContext() else { return local }
         return DisplayStatsAggregator.currentDay(
             local: local,
-            remote: remote,
-            currentDeviceId: syncState.deviceId
+            remote: syncContext.remoteSnapshots,
+            currentDeviceId: syncContext.deviceId
         )
     }
 
     private func displayHistorySnapshot() -> [String: DailyStats] {
         let local = localSyncHistorySnapshot()
-        let syncState = SyncCoordinator.shared.state
-        guard syncState.isConfigured, !syncState.needsRepair else { return local }
-        let remote = RemoteShardCache.shared.snapshots(excludingDeviceId: syncState.deviceId)
-        return DisplayStatsAggregator.aggregate(local: local, remote: remote, currentDeviceId: syncState.deviceId)
+        guard let syncContext = environment.syncDisplayContext() else { return local }
+        return DisplayStatsAggregator.aggregate(
+            local: local,
+            remote: syncContext.remoteSnapshots,
+            currentDeviceId: syncContext.deviceId
+        )
     }
     
     private func aggregate(daily: DailyStats, into total: inout AllTimeStats, weekdays: inout [Int: (total: Int, count: Int)]) {
@@ -1695,10 +1703,11 @@ extension StatsManager {
             total.clickActiveDays += 1
         }
 
-        let date = Calendar.current.startOfDay(for: daily.date)
+        let calendar = environment.calendar()
+        let date = calendar.startOfDay(for: daily.date)
         
         // Weekday stats
-        let weekday = Calendar.current.component(.weekday, from: date)
+        let weekday = calendar.component(.weekday, from: date)
         let dailyTotal = safeAdd(daily.keyPresses, dailyClicks)
         let current = weekdays[weekday, default: (0, 0)]
         let increment = dailyTotal > 0 ? 1 : 0
@@ -1755,7 +1764,7 @@ extension StatsManager {
     }
 
     private func dailyStats(for date: Date) -> DailyStats {
-        if Calendar.current.isDate(date, inSameDayAs: currentStats.date) {
+        if environment.calendar().isDate(date, inSameDayAs: currentStats.date) {
             return currentStats
         }
         let key = dateFormatter.string(from: date)
@@ -1763,8 +1772,8 @@ extension StatsManager {
     }
 
     private func appStatsDates(in range: AppStatsRange) -> [Date] {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let calendar = environment.calendar()
+        let today = calendar.startOfDay(for: environment.now())
 
         let startDate: Date
         switch range {

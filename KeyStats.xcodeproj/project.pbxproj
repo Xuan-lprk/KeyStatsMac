@@ -44,6 +44,7 @@
 		A1000033 /* KPSDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000033 /* KPSDetailView.swift */; };
 		A1000034 /* UpdateCheckCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000034 /* UpdateCheckCoordinator.swift */; };
 		A1000035 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000035 /* AnalyticsManager.swift */; };
+		A1000036 /* StatsManagerLiveEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000036 /* StatsManagerLiveEnvironment.swift */; };
 		B1000001 /* SyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000001 /* SyncModels.swift */; };
 		B1000002 /* SyncCrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002 /* SyncCrypto.swift */; };
 		B1000003 /* SyncStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000003 /* SyncStorage.swift */; };
@@ -115,6 +116,7 @@
 		A2000033 /* KPSDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KPSDetailView.swift; sourceTree = "<group>"; };
 		A2000034 /* UpdateCheckCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckCoordinator.swift; sourceTree = "<group>"; };
 		A2000035 /* AnalyticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManager.swift; sourceTree = "<group>"; };
+		A2000036 /* StatsManagerLiveEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsManagerLiveEnvironment.swift; sourceTree = "<group>"; };
 		A3000001 /* KeyStats.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KeyStats.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A3000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A3000003 /* KeyStats.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KeyStats.entitlements; sourceTree = "<group>"; };
@@ -180,6 +182,7 @@
 				A2000035 /* AnalyticsManager.swift */,
 				A2000023 /* AppActivityTracker.swift */,
 				A2000003 /* StatsManager.swift */,
+				A2000036 /* StatsManagerLiveEnvironment.swift */,
 				A2000022 /* AppStats.swift */,
 				9A20000A /* HelperSupervisor.swift */,
 				9A20000B /* HelperXPCClient.swift */,
@@ -378,6 +381,7 @@
 				9A10000D /* HelperMigrationPresenter.swift in Sources */,
 				A1000023 /* AppActivityTracker.swift in Sources */,
 				A1000003 /* StatsManager.swift in Sources */,
+				A1000036 /* StatsManagerLiveEnvironment.swift in Sources */,
 				A1000022 /* AppStats.swift in Sources */,
 				A1000032 /* StatsModels.swift in Sources */,
 				A1000004 /* MenuBarController.swift in Sources */,
