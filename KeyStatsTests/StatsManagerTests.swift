@@ -157,6 +157,134 @@ final class StatsManagerTests: XCTestCase {
         XCTAssertNoThrow(try decodePersistedHistory(from: context.defaults))
     }
 
+    func testHistoryNormalizationPreservesDistinctValidDayKeysAcrossTimeZoneShift() throws {
+        let targetTimeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 14 * 60 * 60))
+        let context = try makeContext(timeZone: targetTimeZone)
+        defer { context.cleanUp() }
+
+        let westTimeZone = try XCTUnwrap(TimeZone(secondsFromGMT: -12 * 60 * 60))
+        let firstDate = try makeDate(year: 2026, month: 1, day: 1, timeZone: westTimeZone)
+        let secondDate = try makeDate(year: 2026, month: 1, day: 2, timeZone: targetTimeZone)
+        try seed(
+            defaults: context.defaults,
+            current: makeStats(on: context.day(offset: 0)),
+            history: [
+                "2026-01-01": makeStats(on: firstDate, keyPresses: 11),
+                "2026-01-02": makeStats(on: secondDate, keyPresses: 22)
+            ]
+        )
+
+        let snapshot = context.makeManager().localSyncHistorySnapshot()
+
+        XCTAssertEqual(snapshot["2026-01-01"]?.keyPresses, 11)
+        XCTAssertEqual(snapshot["2026-01-02"]?.keyPresses, 22)
+    }
+
+    func testHistoryNormalizationUsesValidKeyAsDateIdentityWhenStoredDateDisagrees() throws {
+        let context = try makeContext()
+        defer { context.cleanUp() }
+
+        let keyDate = try makeDate(year: 2026, month: 5, day: 10, timeZone: context.calendar.timeZone)
+        let storedDate = try makeDate(year: 2026, month: 5, day: 11, timeZone: context.calendar.timeZone)
+        try seed(
+            defaults: context.defaults,
+            current: makeStats(on: context.day(offset: 0)),
+            history: ["2026-05-10": makeStats(on: storedDate, keyPresses: 7)]
+        )
+
+        let snapshot = context.makeManager().localSyncHistorySnapshot()
+        let normalized = try XCTUnwrap(snapshot["2026-05-10"])
+
+        XCTAssertEqual(normalized.keyPresses, 7)
+        XCTAssertEqual(normalized.date, context.calendar.startOfDay(for: keyDate))
+        XCTAssertNil(snapshot["2026-05-11"])
+    }
+
+    func testHistoryNormalizationKeepsOrdinaryCanonicalEntryUnchanged() throws {
+        let context = try makeContext()
+        defer { context.cleanUp() }
+
+        let date = try makeDate(year: 2026, month: 5, day: 12, timeZone: context.calendar.timeZone)
+        try seed(
+            defaults: context.defaults,
+            current: makeStats(on: context.day(offset: 0)),
+            history: ["2026-05-12": makeStats(on: date, keyPresses: 8)]
+        )
+
+        let normalized = try XCTUnwrap(context.makeManager().localSyncHistorySnapshot()["2026-05-12"])
+
+        XCTAssertEqual(normalized.keyPresses, 8)
+        XCTAssertEqual(normalized.date, context.calendar.startOfDay(for: date))
+    }
+
+    func testHistoryNormalizationFallsBackToStoredDateForInvalidKey() throws {
+        let context = try makeContext()
+        defer { context.cleanUp() }
+
+        let date = try makeDate(year: 2026, month: 5, day: 13, timeZone: context.calendar.timeZone)
+        try seed(
+            defaults: context.defaults,
+            current: makeStats(on: context.day(offset: 0)),
+            history: ["legacy-entry": makeStats(on: date, keyPresses: 9)]
+        )
+
+        let snapshot = context.makeManager().localSyncHistorySnapshot()
+
+        XCTAssertNil(snapshot["legacy-entry"])
+        XCTAssertEqual(snapshot["2026-05-13"]?.keyPresses, 9)
+    }
+
+    func testHistoryNormalizationFallbackCollisionIsStableAcrossInputOrder() throws {
+        let firstContext = try makeContext()
+        let secondContext = try makeContext()
+        defer {
+            firstContext.cleanUp()
+            secondContext.cleanUp()
+        }
+
+        let date = try makeDate(year: 2026, month: 5, day: 14, timeZone: firstContext.calendar.timeZone)
+        let firstEntries = [
+            ("z-invalid", makeStats(on: date, keyPresses: 90)),
+            ("a-invalid", makeStats(on: date, keyPresses: 30))
+        ]
+        let secondEntries = Array(firstEntries.reversed())
+        try seed(
+            defaults: firstContext.defaults,
+            current: makeStats(on: firstContext.day(offset: 0)),
+            history: Dictionary(uniqueKeysWithValues: firstEntries)
+        )
+        try seed(
+            defaults: secondContext.defaults,
+            current: makeStats(on: secondContext.day(offset: 0)),
+            history: Dictionary(uniqueKeysWithValues: secondEntries)
+        )
+
+        let firstResult = firstContext.makeManager().localSyncHistorySnapshot()["2026-05-14"]
+        let secondResult = secondContext.makeManager().localSyncHistorySnapshot()["2026-05-14"]
+
+        XCTAssertEqual(firstResult?.keyPresses, 30)
+        XCTAssertEqual(secondResult?.keyPresses, 30)
+    }
+
+    func testHistoryNormalizationPrefersValidKeyOverInvalidFallbackCollision() throws {
+        let context = try makeContext()
+        defer { context.cleanUp() }
+
+        let date = try makeDate(year: 2026, month: 5, day: 15, timeZone: context.calendar.timeZone)
+        try seed(
+            defaults: context.defaults,
+            current: makeStats(on: context.day(offset: 0)),
+            history: [
+                "2026-05-15": makeStats(on: date, keyPresses: 15),
+                "a-invalid": makeStats(on: date, keyPresses: 99)
+            ]
+        )
+
+        let snapshot = context.makeManager().localSyncHistorySnapshot()
+
+        XCTAssertEqual(snapshot["2026-05-15"]?.keyPresses, 15)
+    }
+
     func testFlushPersistsDataForASecondManagerUsingTheSameSuite() throws {
         let context = try makeContext()
         defer { context.cleanUp() }
@@ -319,6 +447,27 @@ final class StatsManagerTests: XCTestCase {
         XCTAssertEqual(snapshot[context.dayKey(context.calendar.startOfDay(for: secondDay))]?.keyPresses, 1)
     }
 
+    func testRolloverPreservesUnflushedPreviousDayBeforeCountingNewDayInput() throws {
+        let context = try makeContext()
+        defer { context.cleanUp() }
+
+        let manager = context.makeManager()
+        let firstDay = context.day(offset: 0)
+        manager.incrementKeyPresses(keyName: "A")
+        manager.incrementKeyPresses(keyName: "A")
+
+        let secondDay = context.calendar.date(byAdding: .day, value: 1, to: context.clock.now)!
+        context.clock.now = secondDay
+        manager.incrementKeyPresses(keyName: "B")
+
+        let snapshot = manager.localSyncHistorySnapshot()
+        XCTAssertEqual(snapshot[context.dayKey(firstDay)]?.keyPresses, 2)
+        XCTAssertEqual(snapshot[context.dayKey(firstDay)]?.keyPressCounts, ["A": 2])
+        XCTAssertTrue(context.calendar.isDate(manager.currentStats.date, inSameDayAs: secondDay))
+        XCTAssertEqual(manager.currentStats.keyPresses, 1)
+        XCTAssertEqual(manager.currentStats.keyPressCounts, ["B": 1])
+    }
+
     func testAllTimeAggregationUsesLocalHistoryWithoutDoubleCountingCurrentDay() throws {
         let context = try makeContext()
         defer { context.cleanUp() }
@@ -352,14 +501,14 @@ final class StatsManagerTests: XCTestCase {
         XCTAssertTrue(context.calendar.isDate(try XCTUnwrap(allTime.lastDate), inSameDayAs: today))
     }
 
-    private func makeContext() throws -> StatsManagerTestContext {
+    private func makeContext(timeZone: TimeZone = .current) throws -> StatsManagerTestContext {
         let suiteName = "keystats-stats-manager-tests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)
 
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = Locale(identifier: "en_US_POSIX")
-        calendar.timeZone = .current
+        calendar.timeZone = timeZone
         let now = try XCTUnwrap(calendar.date(from: DateComponents(
             year: 2026,
             month: 8,
@@ -373,6 +522,13 @@ final class StatsManagerTests: XCTestCase {
             calendar: calendar,
             clock: MutableTestClock(now: now)
         )
+    }
+
+    private func makeDate(year: Int, month: Int, day: Int, timeZone: TimeZone) throws -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = timeZone
+        return try XCTUnwrap(calendar.date(from: DateComponents(year: year, month: month, day: day)))
     }
 
     private func makeStats(on date: Date, keyPresses: Int = 0) -> DailyStats {

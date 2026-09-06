@@ -1105,9 +1105,19 @@ class StatsManager {
 
     private func normalizedHistory(_ importedHistory: [String: DailyStats]) -> [String: DailyStats] {
         var normalized: [String: DailyStats] = [:]
-        for stats in importedHistory.values {
-            let daily = normalizedDailyStats(stats)
-            normalized[dateFormatter.string(from: daily.date)] = daily
+        for (originalKey, stats) in importedHistory.sorted(by: { $0.key < $1.key }) {
+            var daily = normalizedDailyStats(stats)
+            if let keyDate = dateFormatter.date(from: originalKey),
+               dateFormatter.string(from: keyDate) == originalKey {
+                daily.date = environment.calendar().startOfDay(for: keyDate)
+                normalized[originalKey] = daily
+                continue
+            }
+
+            let fallbackKey = dateFormatter.string(from: daily.date)
+            if normalized[fallbackKey] == nil {
+                normalized[fallbackKey] = daily
+            }
         }
         return normalized
     }
@@ -1319,6 +1329,12 @@ class StatsManager {
 
     /// 调用前必须持有 statsStateLock — 原子重置 currentStats 和滑动窗口
     private func resetStatsLocked(for date: Date) {
+        let calendar = environment.calendar()
+        if !calendar.isDate(currentStats.date, inSameDayAs: date) {
+            var previousDaySnapshot = currentStats
+            previousDaySnapshot.date = calendar.startOfDay(for: previousDaySnapshot.date)
+            history[dateFormatter.string(from: previousDaySnapshot.date)] = previousDaySnapshot
+        }
         currentStats = DailyStats(date: date)
         recentKeyTimestamps.removeAll()
         recentClickTimestamps.removeAll()
