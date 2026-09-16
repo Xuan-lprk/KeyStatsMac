@@ -139,6 +139,7 @@ macOS input events
   - 聚合当前日、历史、每键、每 App、距离、KPS/CPS 和通知数据。
   - 通过 `UserDefaults` 保存 JSON 编码的当前数据与历史。
   - 使用锁、snapshot、延迟保存、UI 更新合并和午夜切日逻辑。
+  - 通过 `Environment` 注入存储、时间、日历、日期 key formatter、自动调度和正式运行时副作用，使真实实现可以被 SwiftPM 确定性测试。
   - 区分本机可写历史与包含远端 shard 的显示快照。
 - `KeyStats/StatsManagerLiveEnvironment.swift`
   - 为正式 App 提供 `StatsManager.shared`，并连接通知、Sync 展示和真实运行时依赖。
@@ -218,6 +219,9 @@ PostHog 只用于了解用户如何使用 KeyStats 产品本身，例如 App 版
 - 不要随意改名或删除已有 `UserDefaults` key、Codable 字段、导入导出字段或同步 schema。
 - 修改 `DailyStats`、`AppStats`、`StatsManager` 时，必须考虑旧版本历史数据的解码和迁移。
 - 新字段应有安全默认值；需要改变旧字段语义时，先设计明确迁移方案并添加兼容测试。
+- `dailyStatsHistory` 中每个 `DailyStats` 是某一天的完整累计 snapshot，不是可以任意相加的数据片段；日期 collision 不得默认 merge。
+- 合法的 `yyyy-MM-dd` history key 是用户记录产生时的本地日期身份。`normalizedHistory` 必须保留合法 key，并把内部 `DailyStats.date` 对齐到该 key；只有非法 key 才回退到内部日期。fallback collision 必须使用确定性规则，当前规则为合法 key 优先、多个非法 key 按原 key 字典序选择第一个。
+- 跨日 rollover 在替换 `currentStats` 前，必须把上一日的最新完整 snapshot 写入对应历史，不能依赖 delayed-save 已经执行；同日手动 reset 不应因此被归档。
 - 不要把完整长期历史在每个输入事件上重新序列化；沿用当前延迟保存与 snapshot 模式，除非 Instruments 数据证明需要调整。
 - 不要混淆本机可写历史、远端缓存和用于 UI 的聚合显示快照。
 
@@ -273,8 +277,9 @@ xcodebuild \
 
 - `Package.swift` 定义 `KeyStatsCore` 和 `KeyStatsCoreTests`。
 - `KeyStatsTests/` 当前覆盖模型、App attribution、Analytics consent、`StatsManager` 的本地持久化/导入/合并/历史、同步核心和更新检查协调逻辑。
-- 本次文档更新时共发现 107 个 XCTest；这是当前快照，不是永久数量保证。
+- 本次文档更新时共发现 114 个 XCTest；这是当前快照，不是永久数量保证。
 - SwiftPM 会编译真实 `StatsManager.swift`，测试通过独立 `UserDefaults`、固定时间和关闭自动调度的 environment 创建隔离实例。
+- `StatsManagerTests` 当前直接覆盖持久化、import/merge、跨日 rollover、历史日期 identity 和异常 history key 的确定性 normalization。
 - SwiftPM 不编译 App-only 的 `StatsManagerLiveEnvironment.swift`，也不覆盖 AppDelegate、Helper、XPC、TCC/权限或实际 UI 行为。
 
 每次实现完成后至少：

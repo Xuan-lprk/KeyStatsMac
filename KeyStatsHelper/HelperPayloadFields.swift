@@ -3,6 +3,7 @@ import Foundation
 enum HelperPayloadFields {
     static let type = "type"
     static let keyCode = "keyCode"
+    static let mediaKeyCode = "mediaKeyCode"
     static let keyboardType = "keyboardType"
     static let flags = "flags"
     static let isAutoRepeat = "isAutoRepeat"

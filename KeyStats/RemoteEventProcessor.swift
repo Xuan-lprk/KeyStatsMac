@@ -31,6 +31,21 @@ final class RemoteEventProcessor: NSObject, KeyStatsEventSinkProtocol {
         let pid = (payload[HelperPayloadFields.sourcePID] as? NSNumber)?.int32Value ?? 0
         let stats = StatsManager.shared
 
+        if type == SystemMediaKey.eventType {
+            guard let baseName = SystemMediaKey.keyName(from: payload),
+                  let flags = (payload[HelperPayloadFields.flags] as? NSNumber)?.uint64Value
+            else { return }
+            if stats.handleMouseDistanceCalibrationKeyPress() { return }
+            // Use the existing modifier naming/consumption rules. No hardware F-key is inferred.
+            modifierLock.lock()
+            modifierTracker.consumePendingModifiers(forKeyDownWith: flags, keyCode: 0)
+            modifierLock.unlock()
+            let modifiers = keyboardEventModifierNames(rawFlags: flags, keyCode: 0)
+            let name = (modifiers + [baseName]).joined(separator: "+")
+            stats.incrementKeyPresses(keyName: name)
+            return
+        }
+
         switch type {
         case .keyDown:
             let isAutoRepeat = (payload[HelperPayloadFields.isAutoRepeat] as? NSNumber)?.boolValue ?? false

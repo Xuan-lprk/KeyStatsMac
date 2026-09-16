@@ -3,6 +3,15 @@ import CoreGraphics
 
 enum PayloadBuilder {
     static func build(from event: CGEvent, type: CGEventType) -> [String: Any]? {
+        if type == SystemMediaKey.eventType {
+            guard let code = SystemMediaKey.pressedKeyCode(from: event) else { return nil }
+            // System actions have no reliable target App. Forward only a validated key and modifiers.
+            return [
+                HelperPayloadFields.type: NSNumber(value: type.rawValue),
+                HelperPayloadFields.mediaKeyCode: NSNumber(value: code),
+                HelperPayloadFields.flags: NSNumber(value: event.flags.rawValue)
+            ]
+        }
         var p: [String: Any] = [
             HelperPayloadFields.type: NSNumber(value: type.rawValue),
             HelperPayloadFields.monotonicTime: NSNumber(value: ProcessInfo.processInfo.systemUptime),

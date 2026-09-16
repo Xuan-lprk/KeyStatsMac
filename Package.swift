@@ -9,6 +9,14 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "KeyStatsEventCore",
+            path: "KeyStatsHelper",
+            exclude: ["Assets.xcassets", "Info.plist", "KeyStatsHelper.entitlements", "main.swift",
+                      "EventTapController.swift", "HelperXPCListener.swift", "HelperIdleSupervisor.swift",
+                      "HelperLocations.swift", "HelperProtocols.swift"],
+            sources: ["SystemMediaKey.swift", "PayloadBuilder.swift", "HelperPayloadFields.swift", "ButtonRoleClassifier.swift"]
+        ),
+        .target(
             name: "PostHog",
             path: "KeyStatsTestSupport/PostHog"
         ),
@@ -55,6 +63,7 @@ let package = Package(
             ],
             sources: [
                 "AppStats.swift",
+                "InteractionProfile.swift",
                 "AppActivityTracker.swift",
                 "StatsModels.swift",
                 "StatsManager.swift",
@@ -69,9 +78,9 @@ let package = Package(
         ),
         .testTarget(
             name: "KeyStatsCoreTests",
-            dependencies: ["KeyStatsCore", "PostHog"],
+            dependencies: ["KeyStatsCore", "KeyStatsEventCore", "PostHog"],
             path: "KeyStatsTests",
-            sources: ["AppStatsTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
+            sources: ["AppStatsTests.swift", "SystemMediaKeyTests.swift", "InteractionProfileTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
         )
     ]
 )

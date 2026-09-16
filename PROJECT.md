@@ -125,6 +125,44 @@ Upstream 已有 `scrollWheel` 事件链路和 scroll distance 统计。KeyStatsM
 
 **Scroll Session 不等于 Trackpad Gesture。** 公开 API 无法可靠区分 Trackpad、Magic Mouse 和其他支持连续精确滚动的设备，因此产品和代码均不把它命名为 Trackpad Scroll。
 
+### Interaction Profile v0
+
+- `InteractionProfileCalculator.calculate(days:)` 从每天一份本地完整 snapshot 纯派生计算三个独立相对排名，不读取存储、不持久化、不接入采集/UI/Analytics/Sync。
+- 使用 positive-only mid-rank percentile，零值不进入 cohort，ties 同分；返回原始值、活跃天数、观察天数及 comparability。
+- Keyboard 使用 `keyPresses`；Pointer 仅使用 clicks，当前没有 per-app mouseDistance；Scroll 平均有正值的 distance/session 排名，保留两个组件的证据。
+- score 不是绝对强度、使用时间占比或交互构成比例；不得据此跨维度贴 Keyboard-heavy 等标签。
+- 已通过 deterministic tests 与本地只读预览。下一步仅在明确产品需求下接入展示。
+
+### System Media Keys（源码已实现，待真机验收）
+
+- 原有 F1…F19 普通键映射保留。亮度、音量、静音、播放控制及键盘背光使用各自语义键名，例如 `BrightnessDown`、`VolumeUp`，不假定硬件 F1/F12 位置。
+- 在原有 Helper listen-only EventTap 增加 `NX_SYSDEFINED`；通过公开 `NSEvent` bridge 读取 auxiliary-control 事件，仅白名单内首次 key-down 进入 XPC，松开及长按 repeat 被过滤。
+- 不新增监听器、Timer、私有 API 或原始事件历史。复用现有全局按键计数与延迟持久化；系统操作没有可靠目标 App，暂不写入 per-app counts。
+- XPC 方法及 interface version 不变，仅新增可选 `mediaKeyCode` 字段；旧主 App 忽略未知事件，旧 Helper 不提供新能力。
+- Helper 源码变化会改变构建产物 cdhash。未安装/替换运行中的 Helper，未修改 identifier、签名设置或 TCC；必须使用新构建做真机短按/长按、Fn+F 键和权限连续性验证。
+- `vendor/` 预签名 Helper 尚未更新；现有 DMG 脚本会用它覆盖新构建的 Helper，因此发布前需单独更新并验证 vendored Helper，不能把当前 DMG 当作已包含此功能。
+
+### Keyboard Interaction Signature（可行性调查，未实现）
+
+- 只考虑已有 per-app `keyPressCounts` 的类别比例，不读取顺序、不推断文字、不新增采集或持久化。
+- 初步类别为 printable-key、command/control combination、navigation、editing/control、other。Shift+可打印键仍属于 printable-key；Option/Fn+可打印键因布局/IME 歧义暂归 other。
+- 可打印键不等于文本输入，不能命名为 Text Entry；Cmd/Ctrl 组合也只代表组合形式，不能证明执行了某个快捷操作。
+- 2026-09-01 至 09-07 的只读分类预览显示部分 App 分布有差异，但 Notes/Terminal 等样本很少；未来展示必须带计数覆盖率、命名事件数量和活跃天数。
+- 分类只在本次调查中演算，尚未增加 classifier、API 或产品标签。
+
+### StatsManager Testability / Persistence Reliability
+
+真实 `StatsManager` 已进入 SwiftPM 测试目标，不再依赖复制出来的简化实现：
+
+- `StatsManager.Environment` 可注入独立 `UserDefaults`、固定 clock / calendar / date-key formatter，并可关闭测试中的自动调度。
+- 正式 App 的 singleton 与 live-only 副作用集中在 `StatsManagerLiveEnvironment.swift`；`.live` 仍使用 `UserDefaults.standard` 和改造前一致的默认 `DateFormatter` 行为。
+- 跨日 rollover 会在替换 `currentStats` 前，把 delayed-save 窗口内上一日的最新完整 snapshot 写回 history；新一天从本次输入正常开始，不重复计数。
+- 合法的 `yyyy-MM-dd` history key 现在被视为记录产生时的本地日期身份，不会因为当前时区变化而仅依据内部 `DailyStats.date` 改写 key。
+- `DailyStats` history entry 是完整累计 snapshot，不是 additive fragment；normalization collision 不做 merge。
+- 非法 key 仍回退到内部日期；fallback collision 使用确定性规则：合法 key 优先，多个非法 key 按原 key 字典序选择第一个。
+
+截至 2026-09-06，完整 `swift test` 为 114 个测试通过，Debug build 成功，`git diff --check` 通过。测试数量是当前快照，不是永久保证。
+
 ### Trackpad Feasibility Research
 
 已在主仓库之外完成独立 `TrackpadProbe` 技术验证，未接入 KeyStatsMac 正式代码。

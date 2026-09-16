@@ -18,7 +18,8 @@ final class EventTapController {
 
     private static let eventMask: CGEventMask = {
         let keyboard = (1 << CGEventType.keyDown.rawValue) |
-                       (1 << CGEventType.flagsChanged.rawValue)
+                       (1 << CGEventType.flagsChanged.rawValue) |
+                       (1 << SystemMediaKey.eventType.rawValue)
         let mouse = (1 << CGEventType.leftMouseDown.rawValue) |
                     (1 << CGEventType.rightMouseDown.rawValue) |
                     (1 << CGEventType.otherMouseDown.rawValue) |
