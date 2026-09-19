@@ -501,6 +501,65 @@ final class StatsManagerTests: XCTestCase {
         XCTAssertTrue(context.calendar.isDate(try XCTUnwrap(allTime.lastDate), inSameDayAs: today))
     }
 
+    func testAppBreakdownUsesSelectedRangeSummaryAndDetectsPartialHistory() throws {
+        let context = try makeContext(timeZone: TimeZone(secondsFromGMT: 0)!)
+        defer { context.cleanUp() }
+        func daily(_ offset: Int, total: Int, counts: [String: Int]) -> DailyStats {
+            var day = makeStats(on: context.day(offset: offset), keyPresses: total)
+            var app = AppStats(bundleId: "selected.app", displayName: "Selected")
+            app.keyPresses = total
+            app.keyPressCounts = counts
+            app.leftClicks = total
+            app.scrollDistance = Double(total * 10)
+            app.scrollSessions = total
+            day.appStats[app.bundleId] = app
+            var other = AppStats(bundleId: "other.app", displayName: "Other")
+            other.keyPresses = 999
+            other.keyPressCounts = ["Z": 999]
+            day.appStats[other.bundleId] = other
+            return day
+        }
+        let current = daily(0, total: 2, counts: ["LeftCmd+C": 2])
+        let days = [daily(-1, total: 10, counts: [:]),
+                    daily(-8, total: 3, counts: ["RightCmd+C": 3]),
+                    daily(-31, total: 4, counts: ["Return": 4])]
+        try seed(defaults: context.defaults, current: current,
+                 history: Dictionary(uniqueKeysWithValues: days.map { (context.dayKey($0.date), $0) }))
+        let manager = context.makeManager()
+        let expectations: [(StatsManager.AppStatsRange, Int, Int, AppKeyBreakdown.Coverage)] = [
+            (.today, 2, 2, .complete), (.week, 12, 2, .partial),
+            (.month, 15, 5, .partial), (.all, 19, 9, .partial)
+        ]
+        for (range, total, named, coverage) in expectations {
+            let defaultsBefore = context.defaults.dictionaryRepresentation() as NSDictionary
+            let app = try XCTUnwrap(manager.appStatsSummary(range: range)
+                .first { $0.bundleId == "selected.app" })
+            let profile = try XCTUnwrap(manager.interactionProfiles(range: range)
+                .first { $0.bundleId == app.bundleId })
+            XCTAssertEqual(profile.keyboard.rawValue, Double(total))
+            XCTAssertEqual(profile.pointer.rawValue, Double(app.totalClicks))
+            XCTAssertEqual(profile.scroll.distance.rawValue, app.scrollDistance)
+            XCTAssertEqual(profile.scroll.sessions.rawValue, Double(app.scrollSessions))
+            XCTAssertEqual(profile.keyboard.cohortSize, 2)
+            XCTAssertEqual(profile.keyboard.score, 0.25)
+            let snapshot = AppDetailPresentation(app: app, profiles: [profile],
+                                                 rangeTitle: String(describing: range))
+            XCTAssertEqual(snapshot.rangeTitle, String(describing: range))
+            XCTAssertEqual(snapshot.cards[0].score, 0.25)
+            XCTAssertEqual(context.defaults.dictionaryRepresentation() as NSDictionary, defaultsBefore)
+            let detail = AppKeyBreakdown(appStats: app)
+            XCTAssertEqual(detail.totalKeyPresses, total)
+            XCTAssertEqual(detail.namedKeyPresses, named)
+            XCTAssertEqual(detail.coverage, coverage)
+            XCTAssertFalse(detail.entries.contains { $0.key == "Z" })
+        }
+        let all = try XCTUnwrap(manager.appStatsSummary(range: .all)
+            .first { $0.bundleId == "selected.app" })
+        XCTAssertEqual(AppKeyBreakdown(appStats: all).entries, [
+            .init(key: "Cmd+C", count: 5), .init(key: "Return", count: 4)
+        ])
+    }
+
     private func makeContext(timeZone: TimeZone = .current) throws -> StatsManagerTestContext {
         let suiteName = "keystats-stats-manager-tests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))

@@ -32,6 +32,9 @@
 		A1000021 /* AllTimeStatsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000021 /* AllTimeStatsViewController.swift */; };
 		A1000022 /* AppStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000022 /* AppStats.swift */; };
 		B1000091 /* InteractionProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000091 /* InteractionProfile.swift */; };
+		B1000093 /* AppDetailPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000093 /* AppDetailPresentation.swift */; };
+		B1000094 /* AppDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000094 /* AppDetailView.swift */; };
+		B1000092 /* AppKeyBreakdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000092 /* AppKeyBreakdown.swift */; };
 		A1000023 /* AppActivityTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000023 /* AppActivityTracker.swift */; };
 		A1000024 /* AppStatsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000024 /* AppStatsWindowController.swift */; };
 		A1000025 /* AppStatsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000025 /* AppStatsViewController.swift */; };
@@ -105,6 +108,9 @@
 		A2000021 /* AllTimeStatsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllTimeStatsViewController.swift; sourceTree = "<group>"; };
 		A2000022 /* AppStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStats.swift; sourceTree = "<group>"; };
 		B2000091 /* InteractionProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractionProfile.swift; sourceTree = "<group>"; };
+		B2000093 /* AppDetailPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDetailPresentation.swift; sourceTree = "<group>"; };
+		B2000094 /* AppDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDetailView.swift; sourceTree = "<group>"; };
+		B2000092 /* AppKeyBreakdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKeyBreakdown.swift; sourceTree = "<group>"; };
 		A2000023 /* AppActivityTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppActivityTracker.swift; sourceTree = "<group>"; };
 		A2000024 /* AppStatsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStatsWindowController.swift; sourceTree = "<group>"; };
 		A2000025 /* AppStatsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStatsViewController.swift; sourceTree = "<group>"; };
@@ -188,6 +194,9 @@
 				A2000036 /* StatsManagerLiveEnvironment.swift */,
 				A2000022 /* AppStats.swift */,
 				B2000091 /* InteractionProfile.swift */,
+				B2000093 /* AppDetailPresentation.swift */,
+				B2000094 /* AppDetailView.swift */,
+				B2000092 /* AppKeyBreakdown.swift */,
 				9A20000A /* HelperSupervisor.swift */,
 				9A20000B /* HelperXPCClient.swift */,
 				9A20000C /* RemoteEventProcessor.swift */,
@@ -388,6 +397,9 @@
 				A1000036 /* StatsManagerLiveEnvironment.swift in Sources */,
 				A1000022 /* AppStats.swift in Sources */,
 				B1000091 /* InteractionProfile.swift in Sources */,
+				B1000093 /* AppDetailPresentation.swift in Sources */,
+				B1000094 /* AppDetailView.swift in Sources */,
+				B1000092 /* AppKeyBreakdown.swift in Sources */,
 				A1000032 /* StatsModels.swift in Sources */,
 				A1000004 /* MenuBarController.swift in Sources */,
 				A1000033 /* KPSDetailView.swift in Sources */,

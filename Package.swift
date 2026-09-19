@@ -32,6 +32,7 @@ let package = Package(
                 "zh-Hans.lproj",
                 "zh-Hant.lproj",
                 "AppStatsViewController.swift",
+                "AppDetailView.swift",
                 "KeyStats.entitlements",
                 "NotificationManager.swift",
                 "StatsManagerLiveEnvironment.swift",
@@ -63,6 +64,8 @@ let package = Package(
             ],
             sources: [
                 "AppStats.swift",
+                "AppKeyBreakdown.swift",
+                "AppDetailPresentation.swift",
                 "InteractionProfile.swift",
                 "AppActivityTracker.swift",
                 "StatsModels.swift",
@@ -80,7 +83,7 @@ let package = Package(
             name: "KeyStatsCoreTests",
             dependencies: ["KeyStatsCore", "KeyStatsEventCore", "PostHog"],
             path: "KeyStatsTests",
-            sources: ["AppStatsTests.swift", "SystemMediaKeyTests.swift", "InteractionProfileTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
+            sources: ["AppStatsTests.swift", "AppKeyBreakdownTests.swift", "AppDetailPresentationTests.swift", "SystemMediaKeyTests.swift", "InteractionProfileTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
         )
     ]
 )

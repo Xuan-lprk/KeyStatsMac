@@ -254,6 +254,9 @@ final class AppStatsViewController: NSViewController {
 
         for (index, item) in items.enumerated() {
             let row = AppStatsRowView()
+            row.onOpenBreakdown = { [weak self, bundleId = item.bundleId] in
+                self?.showKeyBreakdown(bundleId: bundleId)
+            }
             row.applyAlternatingBackground(isEvenRow: index.isMultiple(of: 2))
             row.update(
                 name: displayName(for: item),
@@ -279,6 +282,20 @@ final class AppStatsViewController: NSViewController {
                 row.animateBars(delay: delay)
             }
         }
+    }
+
+    private func showKeyBreakdown(bundleId: String) {
+        guard presentedViewControllers?.isEmpty != false,
+              StatsManager.shared.appStatsEnabled,
+              let app = StatsManager.shared.appStatsSummary(range: selectedRange())
+                .first(where: { $0.bundleId == bundleId }) else { return }
+        let snapshot = AppDetailPresentation(
+            app: app,
+            profiles: StatsManager.shared.interactionProfiles(range: selectedRange()),
+            rangeTitle: rangeControl.label(forSegment: rangeControl.selectedSegment) ?? ""
+        )
+        let detail = AppDetailViewController(snapshot: snapshot, icon: appIcon(for: app.bundleId))
+        presentAsSheet(detail)
     }
 
     private func updateEmptyState(text: String) {
@@ -638,9 +655,11 @@ private final class AppStatsHeaderRowView: NSView {
 }
 
 private final class AppStatsRowView: NSView {
+    var onOpenBreakdown: (() -> Void)?
     private var nameStack: NSStackView!
     private var iconView: NSImageView!
-    private var nameLabel: NSTextField!
+    private var nameButton: NSButton!
+    private var disclosureButton: NSButton!
     private var keysBar: SingleBarView!
     private var clicksBar: SingleBarView!
     private var scrollBar: SingleBarView!
@@ -663,16 +682,26 @@ private final class AppStatsRowView: NSView {
         iconView.setContentHuggingPriority(.required, for: .horizontal)
         iconView.setContentCompressionResistancePriority(.required, for: .horizontal)
 
-        nameLabel = NSTextField(labelWithString: "")
-        nameLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
-        nameLabel.textColor = .labelColor
-        nameLabel.lineBreakMode = .byTruncatingTail
-        nameLabel.maximumNumberOfLines = 1
-        nameLabel.usesSingleLineMode = true
-        nameLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        nameLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        nameButton = NSButton(title: "", target: self, action: #selector(openBreakdown))
+        nameButton.isBordered = false
+        nameButton.alignment = .left
+        nameButton.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        nameButton.contentTintColor = .labelColor
+        nameButton.lineBreakMode = .byTruncatingTail
+        nameButton.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        nameButton.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        nameStack = NSStackView(views: [iconView, nameLabel])
+        disclosureButton = NSButton(image: NSImage(systemSymbolName: "chevron.right", accessibilityDescription: nil)!,
+                                    target: self, action: #selector(openBreakdown))
+        disclosureButton.isBordered = false
+        disclosureButton.imageScaling = .scaleProportionallyDown
+        disclosureButton.contentTintColor = .secondaryLabelColor
+        disclosureButton.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            disclosureButton.widthAnchor.constraint(equalToConstant: 18),
+            disclosureButton.heightAnchor.constraint(equalToConstant: 22)
+        ])
+        nameStack = NSStackView(views: [iconView, nameButton, disclosureButton])
         nameStack.orientation = .horizontal
         nameStack.alignment = .centerY
         nameStack.spacing = AppStatsLayout.appIconSpacing
@@ -728,11 +757,19 @@ private final class AppStatsRowView: NSView {
         keysFormatted: String, clicksFormatted: String, scrollFormatted: String
     ) {
         iconView.image = icon
-        nameLabel.stringValue = name
-        nameLabel.toolTip = name
+        nameButton.title = name
+        let help = String(format: NSLocalizedString("appStats.breakdown.open", comment: ""), name)
+        nameButton.toolTip = help
+        nameButton.setAccessibilityLabel(help)
+        disclosureButton.toolTip = help
+        disclosureButton.setAccessibilityLabel(help)
         keysBar.update(value: keys, maxValue: maxKeys, formatted: keysFormatted)
         clicksBar.update(value: clicks, maxValue: maxClicks, formatted: clicksFormatted)
         scrollBar.update(value: scroll, maxValue: maxScroll, formatted: scrollFormatted)
+    }
+
+    @objc private func openBreakdown() {
+        onOpenBreakdown?()
     }
 
     func animateBars(delay: TimeInterval) {

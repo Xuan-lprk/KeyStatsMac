@@ -199,7 +199,7 @@
 
 "appStats.windowTitle" = "按應用統計";
 "appStats.title" = "按應用統計";
-"appStats.subtitle" = "按應用統計鍵盤/點擊/滾動，僅保存聚合數據";
+"appStats.subtitle" = "點擊應用，查看所選時間範圍內的具體按鍵。僅保存次數，不記錄內容。";
 "appStats.button" = "應用統計";
 "appStats.range.today" = "今天";
 "appStats.range.week" = "過去7天";
@@ -217,6 +217,19 @@
 "appStats.empty" = "暫無應用數據";
 "appStats.disabled" = "按應用統計已在設置中關閉";
 "appStats.unknownApp" = "未知應用";
+"appStats.breakdown.open" = "查看 %@ 的詳情";
+"appStats.breakdown.total" = "%@ 次按鍵";
+"appStats.breakdown.coverage" = "%@ 次有按鍵明細，共 %@ 次按鍵。";
+"appStats.breakdown.incomplete" = "部分活動可能沒有按鍵明細，例如舊版歷史記錄。";
+"appStats.breakdown.unavailable" = "這些按鍵沒有可用的明細。";
+"appStats.breakdown.arrow.Left" = "左方向鍵";
+"appStats.breakdown.arrow.Right" = "右方向鍵";
+"appStats.breakdown.arrow.Up" = "上方向鍵";
+"appStats.breakdown.arrow.Down" = "下方向鍵";
+"appStats.breakdown.noActivity" = "此應用在所選日期範圍內沒有按鍵活動。";
+"appStats.breakdown.key" = "按鍵 / 組合鍵";
+"appStats.breakdown.count" = "次數";
+"appStats.breakdown.close" = "關閉";
 
 "keyboardHeatmap.windowTitle" = "鍵盤熱力圖";
 "keyboardHeatmap.title" = "鍵盤熱力圖";
@@ -356,3 +369,20 @@
 "stats.reset.local.message" = "只會重置本機今天的統計，其他設備不受影響；下一次同步會用更高版本傳播零值快照。";
 "button.cancel" = "取消";
 "button.confirm" = "確認";
+
+/* App Detail Dashboard */
+"appDetail.profile" = "交互概覽";
+"appDetail.explanation" = "此應用在所選時間內，相對於你的其他應用的活動量排名。";
+"appDetail.independent" = "每個指標獨立排名，不代表使用佔比。";
+"appDetail.keyboard" = "鍵盤";
+"appDetail.clicks" = "點擊";
+"appDetail.scroll" = "捲動";
+"appDetail.percentile" = "百分位";
+"appDetail.insufficient" = "可比較的應用不足";
+"appDetail.noActivity" = "此範圍內沒有活動";
+"appDetail.clickCount" = "%@ 次點擊";
+"appDetail.distance" = "捲動 %@ px";
+"appDetail.sessions" = "%@ 次捲動階段";
+"appDetail.days" = "活躍 %@ 天";
+"appDetail.cohort" = "參考：%@ 個有活動的應用";
+"appDetail.scrollCohorts" = "參考應用數 · 距離：%@ · 階段：%@";

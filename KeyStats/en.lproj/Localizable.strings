@@ -199,7 +199,7 @@
 
 "appStats.windowTitle" = "App Statistics";
 "appStats.title" = "App Statistics";
-"appStats.subtitle" = "Counts keys, clicks, and scroll by app. No content is recorded.";
+"appStats.subtitle" = "Select an app to see its keys in this date range. Only counts are saved, never content.";
 "appStats.button" = "App Stats";
 "appStats.range.today" = "Today";
 "appStats.range.week" = "Last 7 Days";
@@ -217,6 +217,19 @@
 "appStats.empty" = "No app data yet";
 "appStats.disabled" = "App stats are disabled in Settings";
 "appStats.unknownApp" = "Unknown App";
+"appStats.breakdown.open" = "View details for %@";
+"appStats.breakdown.total" = "%@ key presses";
+"appStats.breakdown.coverage" = "Key details available for %@ of %@ key presses.";
+"appStats.breakdown.incomplete" = "Some activity, including older history, may not include key details.";
+"appStats.breakdown.unavailable" = "Key details aren't available for this activity.";
+"appStats.breakdown.arrow.Left" = "Left Arrow";
+"appStats.breakdown.arrow.Right" = "Right Arrow";
+"appStats.breakdown.arrow.Up" = "Up Arrow";
+"appStats.breakdown.arrow.Down" = "Down Arrow";
+"appStats.breakdown.noActivity" = "No key presses for this app in this date range.";
+"appStats.breakdown.key" = "Key / Combination";
+"appStats.breakdown.count" = "Count";
+"appStats.breakdown.close" = "Close";
 
 "keyboardHeatmap.windowTitle" = "Keyboard Heatmap";
 "keyboardHeatmap.title" = "Keyboard Heatmap";
@@ -356,3 +369,20 @@
 "stats.reset.local.message" = "Only today's statistics on this Mac will be reset. Other devices are unaffected, and the zero snapshot will sync with a higher revision.";
 "button.cancel" = "Cancel";
 "button.confirm" = "Confirm";
+
+/* App Detail Dashboard */
+"appDetail.profile" = "Interaction Profile";
+"appDetail.explanation" = "Where this app ranks among your apps in this date range.";
+"appDetail.independent" = "Each metric is ranked independently, not a share of usage.";
+"appDetail.keyboard" = "Keyboard";
+"appDetail.clicks" = "Clicks";
+"appDetail.scroll" = "Scroll";
+"appDetail.percentile" = "percentile";
+"appDetail.insufficient" = "Not enough comparable apps";
+"appDetail.noActivity" = "No activity in this range";
+"appDetail.clickCount" = "%@ clicks";
+"appDetail.distance" = "%@ px scrolled";
+"appDetail.sessions" = "%@ sessions";
+"appDetail.days" = "%@ active days";
+"appDetail.cohort" = "Reference: %@ apps with activity";
+"appDetail.scrollCohorts" = "Reference apps · distance: %@ · sessions: %@";

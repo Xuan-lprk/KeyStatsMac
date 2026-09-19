@@ -1759,24 +1759,28 @@ extension StatsManager {
 
     func appStatsSummary(range: AppStatsRange) -> [AppStats] {
         var totals: [String: AppStats] = [:]
-        switch range {
-        case .today:
-            mergeAppStats(from: currentStats, into: &totals)
-        case .week, .month:
-            let dates = appStatsDates(in: range)
-            for date in dates {
-                let daily = dailyStats(for: date)
-                mergeAppStats(from: daily, into: &totals)
-            }
-        case .all:
-            let todayKey = dateFormatter.string(from: currentStats.date)
-            for daily in history.values {
-                if dateFormatter.string(from: daily.date) == todayKey { continue }
-                mergeAppStats(from: daily, into: &totals)
-            }
-            mergeAppStats(from: currentStats, into: &totals)
+        for daily in appStatsDays(in: range) {
+            mergeAppStats(from: daily, into: &totals)
         }
         return Array(totals.values)
+    }
+
+    /// Derived on demand; shares the existing App Stats range and writes nothing.
+    func interactionProfiles(range: AppStatsRange) -> [InteractionProfile] {
+        InteractionProfileCalculator.calculate(days: appStatsDays(in: range))
+    }
+
+    private func appStatsDays(in range: AppStatsRange) -> [DailyStats] {
+        switch range {
+        case .today:
+            return [currentStats]
+        case .week, .month:
+            return appStatsDates(in: range).map { dailyStats(for: $0) }
+        case .all:
+            let todayKey = dateFormatter.string(from: currentStats.date)
+            return history.values.filter { dateFormatter.string(from: $0.date) != todayKey }
+                + [currentStats]
+        }
     }
 
     private func dailyStats(for date: Date) -> DailyStats {
