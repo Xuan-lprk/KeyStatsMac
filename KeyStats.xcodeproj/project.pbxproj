@@ -33,6 +33,9 @@
 		A1000022 /* AppStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000022 /* AppStats.swift */; };
 		B1000091 /* InteractionProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000091 /* InteractionProfile.swift */; };
 		B1000093 /* AppDetailPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000093 /* AppDetailPresentation.swift */; };
+		B1000095 /* KeyboardHeatmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000095 /* KeyboardHeatmapView.swift */; };
+		B1000097 /* PhysicalKeyMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000097 /* PhysicalKeyMapping.swift */; };
+		B1000098 /* KeyboardLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000098 /* KeyboardLayout.swift */; };
 		B1000094 /* AppDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000094 /* AppDetailView.swift */; };
 		B1000092 /* AppKeyBreakdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000092 /* AppKeyBreakdown.swift */; };
 		A1000023 /* AppActivityTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000023 /* AppActivityTracker.swift */; };
@@ -109,6 +112,9 @@
 		A2000022 /* AppStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStats.swift; sourceTree = "<group>"; };
 		B2000091 /* InteractionProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractionProfile.swift; sourceTree = "<group>"; };
 		B2000093 /* AppDetailPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDetailPresentation.swift; sourceTree = "<group>"; };
+		B2000095 /* KeyboardHeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHeatmapView.swift; sourceTree = "<group>"; };
+		B2000097 /* PhysicalKeyMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicalKeyMapping.swift; sourceTree = "<group>"; };
+		B2000098 /* KeyboardLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLayout.swift; sourceTree = "<group>"; };
 		B2000094 /* AppDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDetailView.swift; sourceTree = "<group>"; };
 		B2000092 /* AppKeyBreakdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKeyBreakdown.swift; sourceTree = "<group>"; };
 		A2000023 /* AppActivityTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppActivityTracker.swift; sourceTree = "<group>"; };
@@ -195,6 +201,9 @@
 				A2000022 /* AppStats.swift */,
 				B2000091 /* InteractionProfile.swift */,
 				B2000093 /* AppDetailPresentation.swift */,
+				B2000095 /* KeyboardHeatmapView.swift */,
+				B2000097 /* PhysicalKeyMapping.swift */,
+				B2000098 /* KeyboardLayout.swift */,
 				B2000094 /* AppDetailView.swift */,
 				B2000092 /* AppKeyBreakdown.swift */,
 				9A20000A /* HelperSupervisor.swift */,
@@ -398,6 +407,9 @@
 				A1000022 /* AppStats.swift in Sources */,
 				B1000091 /* InteractionProfile.swift in Sources */,
 				B1000093 /* AppDetailPresentation.swift in Sources */,
+				B1000095 /* KeyboardHeatmapView.swift in Sources */,
+				B1000097 /* PhysicalKeyMapping.swift in Sources */,
+				B1000098 /* KeyboardLayout.swift in Sources */,
 				B1000094 /* AppDetailView.swift in Sources */,
 				B1000092 /* AppKeyBreakdown.swift in Sources */,
 				A1000032 /* StatsModels.swift in Sources */,

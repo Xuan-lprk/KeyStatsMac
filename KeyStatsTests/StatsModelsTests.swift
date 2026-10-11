@@ -4,6 +4,13 @@ import IOKit.hidsystem
 @testable import KeyStatsCore
 
 final class StatsModelsTests: XCTestCase {
+    func testPhysicalPlusRegression() {
+        XCTAssertEqual(keyboardHeatmapCounts(from: ["+": 4]), ["=": 4])
+        XCTAssertEqual(keyboardHeatmapCounts(from: ["Cmd++": 3]), ["Cmd": 3, "=": 3])
+        XCTAssertEqual(keyboardHeatmapCounts(from: ["Shift++": 2]), ["Shift": 2, "=": 2])
+        XCTAssertEqual(keyboardHeatmapCounts(from: ["Cmd+Shift++": 1]), ["Cmd": 1, "Shift": 1, "=": 1])
+    }
+
     func testMenuBarCompactNumberUsesAtMostThreeLeadingDigits() {
         XCTAssertEqual(formatMenuBarCompactNumber(999), "999")
         XCTAssertEqual(formatMenuBarCompactNumber(1_000), "1.00k")

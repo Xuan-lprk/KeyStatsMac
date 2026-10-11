@@ -285,25 +285,7 @@ struct ModifierStandaloneTracker {
 }
 
 func keyboardHeatmapCounts(from keyPressCounts: [String: Int]) -> [String: Int] {
-    var aggregated: [String: Int] = [:]
-
-    for (rawKey, rawCount) in keyPressCounts {
-        let count = max(0, rawCount)
-        guard count > 0 else { continue }
-
-        let components = rawKey
-            .split(separator: "+")
-            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        let sourceKeys = components.isEmpty ? [rawKey] : components
-        for sourceKey in sourceKeys {
-            guard let normalizedKey = normalizedKeyboardHeatmapDisplayKey(sourceKey) else { continue }
-            aggregated[normalizedKey, default: 0] += count
-        }
-    }
-
-    return aggregated
+    PhysicalKeyMapping.map(keyPressCounts).counts
 }
 
 func keyBreakdownDisplayCounts(from keyPressCounts: [String: Int]) -> [String: Int] {
@@ -368,90 +350,6 @@ func normalizedKeyBreakdownDisplayPart(_ rawPart: String) -> String {
     }
 }
 
-func normalizedKeyboardHeatmapDisplayKey(_ rawKey: String) -> String? {
-    let trimmed = rawKey.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return nil }
-
-    let collapsed = trimmed
-        .replacingOccurrences(of: " ", with: "")
-        .replacingOccurrences(of: "-", with: "")
-        .uppercased()
-
-    if collapsed.count == 1 {
-        return collapsed
-    }
-
-    if collapsed.hasPrefix("F"), Int(collapsed.dropFirst()) != nil {
-        return collapsed
-    }
-
-    switch collapsed {
-    case "LEFTCMD", "LEFTCOMMAND":
-        return "LeftCmd"
-    case "RIGHTCMD", "RIGHTCOMMAND":
-        return "RightCmd"
-    case "CMD", "COMMAND", "⌘":
-        return "Cmd"
-    case "LEFTOPTION", "LEFTOPT", "LEFTALT":
-        return "LeftOption"
-    case "RIGHTOPTION", "RIGHTOPT", "RIGHTALT":
-        return "RightOption"
-    case "OPTION", "OPT", "ALT", "⌥":
-        return "Option"
-    case "LEFTSHIFT":
-        return "LeftShift"
-    case "RIGHTSHIFT":
-        return "RightShift"
-    case "SHIFT", "⇧":
-        return "Shift"
-    case "CTRL", "CONTROL", "⌃":
-        return "Ctrl"
-    case "FN", "FUNCTION", "🌐":
-        return "Fn"
-    case "SPACE", "SPACEBAR":
-        return "Space"
-    case "ESCAPE", "ESC", "⎋":
-        return "Esc"
-    case "RETURN", "↩":
-        return "Return"
-    case "ENTER", "⌅":
-        return "Enter"
-    case "BACKSPACE":
-        return "Delete"
-    case "DELETE", "⌫":
-        return "Delete"
-    case "FORWARDDELETE", "DEL", "⌦":
-        return "ForwardDelete"
-    case "INSERT", "INS", "HELP":
-        return "Insert"
-    case "PAGEUP":
-        return "PageUp"
-    case "PAGEDOWN":
-        return "PageDown"
-    case "HOME":
-        return "Home"
-    case "END":
-        return "End"
-    case "PRINTSCREEN", "PRTSC", "PRTSCN", "SNAPSHOT":
-        return "PrintScreen"
-    case "SCROLLLOCK", "SCROLL":
-        return "ScrollLock"
-    case "PAUSE", "BREAK":
-        return "Pause"
-    case "LEFT", "ARROWLEFT", "LEFTARROW":
-        return "Left"
-    case "RIGHT", "ARROWRIGHT", "RIGHTARROW":
-        return "Right"
-    case "UP", "ARROWUP", "UPARROW":
-        return "Up"
-    case "DOWN", "ARROWDOWN", "DOWNARROW":
-        return "Down"
-    case "CAPSLOCK", "CAPS":
-        return "CapsLock"
-    default:
-        return trimmed
-    }
-}
 
 enum ScrollEventPhase: Int64 {
     case none = 0
