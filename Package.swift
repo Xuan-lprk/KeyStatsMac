@@ -75,6 +75,7 @@ let package = Package(
                 "KeyboardLayout.swift",
                 "CumulativeKeyboardSnapshot.swift",
                 "KeyboardTrackingPeriod.swift",
+                "KeyboardUsageProgress.swift",
                 "StatsManager.swift",
                 "AnalyticsManager.swift",
                 "UpdateCheckCoordinator.swift",
@@ -89,7 +90,7 @@ let package = Package(
             name: "KeyStatsCoreTests",
             dependencies: ["KeyStatsCore", "KeyStatsEventCore", "PostHog"],
             path: "KeyStatsTests",
-            sources: ["KeyboardTrackingPeriodTests.swift", "CumulativeKeyboardSnapshotTests.swift", "KeyboardLayoutTests.swift", "PhysicalKeyMappingTests.swift", "AppStatsTests.swift", "AppKeyBreakdownTests.swift", "AppDetailPresentationTests.swift", "SystemMediaKeyTests.swift", "InteractionProfileTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
+            sources: ["KeyboardUsageProgressTests.swift", "KeyboardTrackingPeriodTests.swift", "CumulativeKeyboardSnapshotTests.swift", "KeyboardLayoutTests.swift", "PhysicalKeyMappingTests.swift", "AppStatsTests.swift", "AppKeyBreakdownTests.swift", "AppDetailPresentationTests.swift", "SystemMediaKeyTests.swift", "InteractionProfileTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
         )
     ]
 )
