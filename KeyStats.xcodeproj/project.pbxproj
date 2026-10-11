@@ -37,6 +37,8 @@
 		B1000096 /* KeyboardHeatmapRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000096 /* KeyboardHeatmapRepresentable.swift */; };
 		B1000097 /* PhysicalKeyMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000097 /* PhysicalKeyMapping.swift */; };
 		B1000098 /* KeyboardLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000098 /* KeyboardLayout.swift */; };
+		B1000099 /* CumulativeKeyboardSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000099 /* CumulativeKeyboardSnapshot.swift */; };
+		B100009A /* KeyboardTrackingPeriod.swift in Sources */ = {isa = PBXBuildFile; fileRef = B200009A /* KeyboardTrackingPeriod.swift */; };
 		B1000094 /* AppDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000094 /* AppDetailView.swift */; };
 		B1000092 /* AppKeyBreakdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000092 /* AppKeyBreakdown.swift */; };
 		A1000023 /* AppActivityTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000023 /* AppActivityTracker.swift */; };
@@ -117,6 +119,8 @@
 		B2000096 /* KeyboardHeatmapRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHeatmapRepresentable.swift; sourceTree = "<group>"; };
 		B2000097 /* PhysicalKeyMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicalKeyMapping.swift; sourceTree = "<group>"; };
 		B2000098 /* KeyboardLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLayout.swift; sourceTree = "<group>"; };
+		B2000099 /* CumulativeKeyboardSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CumulativeKeyboardSnapshot.swift; sourceTree = "<group>"; };
+		B200009A /* KeyboardTrackingPeriod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardTrackingPeriod.swift; sourceTree = "<group>"; };
 		B2000094 /* AppDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDetailView.swift; sourceTree = "<group>"; };
 		B2000092 /* AppKeyBreakdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKeyBreakdown.swift; sourceTree = "<group>"; };
 		A2000023 /* AppActivityTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppActivityTracker.swift; sourceTree = "<group>"; };
@@ -207,6 +211,8 @@
 				B2000096 /* KeyboardHeatmapRepresentable.swift */,
 				B2000097 /* PhysicalKeyMapping.swift */,
 				B2000098 /* KeyboardLayout.swift */,
+				B2000099 /* CumulativeKeyboardSnapshot.swift */,
+				B200009A /* KeyboardTrackingPeriod.swift */,
 				B2000094 /* AppDetailView.swift */,
 				B2000092 /* AppKeyBreakdown.swift */,
 				9A20000A /* HelperSupervisor.swift */,
@@ -414,6 +420,8 @@
 				B1000096 /* KeyboardHeatmapRepresentable.swift in Sources */,
 				B1000097 /* PhysicalKeyMapping.swift in Sources */,
 				B1000098 /* KeyboardLayout.swift in Sources */,
+				B1000099 /* CumulativeKeyboardSnapshot.swift in Sources */,
+				B100009A /* KeyboardTrackingPeriod.swift in Sources */,
 				B1000094 /* AppDetailView.swift in Sources */,
 				B1000092 /* AppKeyBreakdown.swift in Sources */,
 				A1000032 /* StatsModels.swift in Sources */,

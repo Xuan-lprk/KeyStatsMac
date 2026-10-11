@@ -16,7 +16,10 @@ private struct StatsManagerTestContext {
     let calendar: Calendar
     let clock: MutableTestClock
 
-    func makeManager(blocksLegacyImport: @escaping () -> Bool = { false }) -> StatsManager {
+    func makeManager(
+        blocksLegacyImport: @escaping () -> Bool = { false },
+        syncDisplayContext: @escaping () -> StatsManager.SyncDisplayContext? = { nil }
+    ) -> StatsManager {
         StatsManager(environment: StatsManager.Environment(
             userDefaults: defaults,
             now: { clock.now },
@@ -31,7 +34,7 @@ private struct StatsManagerTestContext {
             notificationCenter: NotificationCenter(),
             schedulesAutomaticWork: false,
             blocksLegacyImport: blocksLegacyImport,
-            syncDisplayContext: { nil },
+            syncDisplayContext: syncDisplayContext,
             sendThresholdNotification: { _, _, _ in }
         ))
     }
@@ -568,6 +571,176 @@ final class StatsManagerTests: XCTestCase {
         XCTAssertEqual(AppKeyBreakdown(appStats: all).entries, [
             .init(key: "Cmd+C", count: 5), .init(key: "Return", count: 4)
         ])
+    }
+
+    func testCumulativeKeyboardQueryIncludesUnsavedCurrentOnceAndWritesNothing() throws {
+        let context = try makeContext(timeZone: TimeZone(secondsFromGMT: 0)!)
+        defer { context.cleanUp() }
+        let today = context.day(offset: 0)
+        let yesterday = context.day(offset: -1)
+        var past = makeStats(on: yesterday, keyPresses: 4)
+        past.keyPressCounts = ["B": 4]
+        var current = makeStats(on: today, keyPresses: 2)
+        current.keyPressCounts = ["A": 2]
+        try seed(defaults: context.defaults, current: current,
+                 history: [context.dayKey(yesterday): past,
+                           context.dayKey(today): makeStats(on: today, keyPresses: 99)])
+        let manager = context.makeManager()
+        manager.incrementKeyPresses(keyName: "A") // Remains inside delayed-save window.
+        let persistedBefore = context.defaults.dictionaryRepresentation() as NSDictionary
+
+        let timeline = manager.cumulativeKeyboardTimeline()
+        let latest = try XCTUnwrap(manager.cumulativeKeyboardSnapshot(asOf: today))
+
+        XCTAssertEqual(timeline.map(\.totalKeyPresses), [4, 7])
+        let period = try XCTUnwrap(manager.keyboardTrackingPeriod())
+        XCTAssertEqual(period.firstTrackedDayKey, context.dayKey(yesterday))
+        XCTAssertEqual(period.dayIndex(for: latest), 2)
+        XCTAssertEqual(latest, timeline.last)
+        XCTAssertEqual(latest.keyPressCounts, ["B": 4, "A": 3])
+        XCTAssertEqual(latest.detailedKeyPresses, 7)
+        XCTAssertEqual(manager.cumulativeKeyboardSnapshot(asOf: yesterday)?.totalKeyPresses, 4)
+        XCTAssertEqual(manager.getAllTimeStats().totalKeyPresses, latest.totalKeyPresses)
+        XCTAssertEqual(manager.getAllTimeStats().keyPressCounts, latest.keyPressCounts)
+        XCTAssertEqual(try decodePersistedCurrent(from: context.defaults).keyPresses, 2)
+        XCTAssertEqual(context.defaults.dictionaryRepresentation() as NSDictionary, persistedBefore)
+    }
+
+    func testCumulativeKeyboardQueryUsesExistingHistoricalIdentityAndInvalidKeyFallback() throws {
+        let targetTimeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 14 * 60 * 60))
+        let context = try makeContext(timeZone: targetTimeZone)
+        defer { context.cleanUp() }
+        let west = try XCTUnwrap(TimeZone(secondsFromGMT: -12 * 60 * 60))
+        let firstStoredDate = try makeDate(year: 2026, month: 1, day: 1, timeZone: west)
+        let secondDate = try makeDate(year: 2026, month: 1, day: 2, timeZone: targetTimeZone)
+        let fallbackDate = try makeDate(year: 2026, month: 5, day: 13, timeZone: targetTimeZone)
+        var first = makeStats(on: firstStoredDate, keyPresses: 11)
+        first.keyPressCounts = ["A": 11]
+        var second = makeStats(on: secondDate, keyPresses: 22)
+        second.keyPressCounts = ["B": 22]
+        var fallback = makeStats(on: fallbackDate, keyPresses: 1)
+        fallback.keyPressCounts = ["Function+A": 1]
+        try seed(defaults: context.defaults, current: makeStats(on: context.day(offset: 0)),
+            history: ["2026-01-01": first, "2026-01-02": second, "legacy-entry": fallback])
+        let manager = context.makeManager()
+
+        let timeline = manager.cumulativeKeyboardTimeline()
+
+        XCTAssertEqual(timeline.map(\.dayKey),
+            ["2026-01-01", "2026-01-02", "2026-05-13", context.dayKey(context.day(offset: 0))])
+        XCTAssertEqual(timeline.map(\.totalKeyPresses), [11, 33, 34, 34])
+        XCTAssertEqual(timeline[0].date,
+            try makeDate(year: 2026, month: 1, day: 1, timeZone: targetTimeZone))
+        XCTAssertEqual(timeline[1].date, secondDate)
+        XCTAssertEqual(timeline[1].keyPressCounts, ["A": 11, "B": 22])
+        XCTAssertEqual(timeline[2].keyPressCounts["Fn+A"], 1)
+        XCTAssertEqual(manager.cumulativeKeyboardTimeline(), timeline)
+    }
+
+    func testCumulativeKeyboardQueryKeepsLatestRolloverHistory() throws {
+        // DailyStats(date:) uses Calendar.current; rollover follows the live system
+        // timezone just as existing rollover tests do. Cross-zone history is tested above.
+        let context = try makeContext()
+        defer { context.cleanUp() }
+        let manager = context.makeManager()
+        let firstDay = context.day(offset: 0)
+        manager.incrementKeyPresses(keyName: "Cmd+C")
+        manager.incrementKeyPresses(keyName: "Cmd+C")
+        context.clock.now = context.calendar.date(byAdding: .day, value: 1, to: context.clock.now)!
+        manager.incrementKeyPresses(keyName: "A")
+
+        let timeline = manager.cumulativeKeyboardTimeline()
+
+        XCTAssertEqual(timeline.map(\.dayKey),
+            [context.dayKey(firstDay), context.dayKey(context.day(offset: 0))])
+        XCTAssertEqual(timeline.map(\.totalKeyPresses), [2, 3])
+        XCTAssertEqual(timeline[0].keyPressCounts, ["Cmd+C": 2])
+        XCTAssertEqual(timeline[1].keyPressCounts, ["Cmd+C": 2, "A": 1])
+    }
+
+    func testCumulativeKeyboardQueryMatchesGlobalDisplayAggregationWithoutChangingLocalHistory() throws {
+        let context = try makeContext(timeZone: TimeZone(secondsFromGMT: 0)!)
+        defer { context.cleanUp() }
+        let today = context.day(offset: 0)
+        let yesterday = context.day(offset: -1)
+        let remoteOnlyDate = context.day(offset: -2)
+        var past = makeStats(on: yesterday, keyPresses: 4)
+        past.keyPressCounts = ["A": 4]
+        var current = makeStats(on: today, keyPresses: 2)
+        current.keyPressCounts = ["LeftCmd+C": 2]
+        try seed(defaults: context.defaults, current: current,
+                 history: [context.dayKey(yesterday): past])
+        let remote = [
+            CoreDaySnapshotV1(deviceId: "current", localDay: context.dayKey(today),
+                revision: 1, keyPresses: 100, keyPressCounts: ["Z": 100], clicks: .zero),
+            CoreDaySnapshotV1(deviceId: "other", localDay: context.dayKey(today),
+                revision: 1, keyPresses: 3, keyPressCounts: ["Cmd++": 3], clicks: .zero),
+            CoreDaySnapshotV1(deviceId: "other", localDay: context.dayKey(yesterday),
+                revision: 1, keyPresses: 5, keyPressCounts: ["B": 5], clicks: .zero),
+            CoreDaySnapshotV1(deviceId: "other", localDay: context.dayKey(remoteOnlyDate),
+                revision: 1, keyPresses: 7, keyPressCounts: ["Option+V": 7], clicks: .zero)
+        ]
+        let manager = context.makeManager(syncDisplayContext: {
+            StatsManager.SyncDisplayContext(deviceId: "current", remoteSnapshots: remote)
+        })
+        let before = context.defaults.dictionaryRepresentation() as NSDictionary
+
+        let timeline = manager.cumulativeKeyboardTimeline()
+        let latest = try XCTUnwrap(manager.cumulativeKeyboardSnapshot(asOf: today))
+
+        XCTAssertEqual(timeline.map(\.totalKeyPresses), [7, 16, 21])
+        XCTAssertEqual(timeline.first?.dayKey, context.dayKey(remoteOnlyDate))
+        XCTAssertEqual(timeline.first?.date, remoteOnlyDate)
+        XCTAssertEqual(latest, timeline.last)
+        XCTAssertEqual(latest.keyPressCounts,
+            ["Option+V": 7, "A": 4, "B": 5, "LeftCmd+C": 2, "Cmd++": 3])
+        XCTAssertEqual(latest.detailedKeyPresses, 21)
+        XCTAssertEqual(latest.totalKeyPresses, manager.getAllTimeStats().totalKeyPresses)
+        XCTAssertEqual(latest.keyPressCounts, manager.getAllTimeStats().keyPressCounts)
+        let local = manager.localSyncHistorySnapshot()
+        XCTAssertEqual(local[context.dayKey(today)]?.keyPresses, 2)
+        XCTAssertEqual(local[context.dayKey(yesterday)]?.keyPresses, 4)
+        XCTAssertNil(local[context.dayKey(remoteOnlyDate)])
+        XCTAssertEqual(context.defaults.dictionaryRepresentation() as NSDictionary, before)
+    }
+
+    func testKeyboardTrackingPeriodUsesDisplayHistoryAndCountsCalendarGaps() throws {
+        let context = try makeContext(timeZone: TimeZone(secondsFromGMT: 0)!)
+        defer { context.cleanUp() }
+        let today = context.day(offset: 0)
+        let first = context.day(offset: -3)
+        let mouseOnlyDay = context.day(offset: -4)
+        var mouseOnly = makeStats(on: mouseOnlyDay)
+        mouseOnly.leftClicks = 5
+        try seed(defaults: context.defaults, current: makeStats(on: today, keyPresses: 3),
+                 history: [context.dayKey(mouseOnlyDay): mouseOnly,
+                           context.dayKey(context.day(offset: -1)):
+                            makeStats(on: context.day(offset: -1), keyPresses: 2)])
+        let remote = [
+            CoreDaySnapshotV1(deviceId: "current", localDay: context.dayKey(context.day(offset: -5)),
+                revision: 1, keyPresses: 100, keyPressCounts: [:], clicks: .zero),
+            CoreDaySnapshotV1(deviceId: "other", localDay: context.dayKey(first),
+                revision: 1, keyPresses: 7, keyPressCounts: [:], clicks: .zero)
+        ]
+        let manager = context.makeManager(syncDisplayContext: {
+            StatsManager.SyncDisplayContext(deviceId: "current", remoteSnapshots: remote)
+        })
+        let before = context.defaults.dictionaryRepresentation() as NSDictionary
+
+        let period = try XCTUnwrap(manager.keyboardTrackingPeriod())
+        let timeline = manager.cumulativeKeyboardTimeline()
+
+        XCTAssertEqual(period.firstTrackedDayKey, context.dayKey(first))
+        XCTAssertEqual(period.firstTrackedDate, first)
+        XCTAssertEqual(timeline.first(where: { $0.totalKeyPresses > 0 })?.dayKey,
+                       period.firstTrackedDayKey)
+        XCTAssertEqual(period.dayIndex(for: context.dayKey(first)), 1)
+        XCTAssertEqual(period.dayIndex(for: context.dayKey(context.day(offset: -2))), 2)
+        XCTAssertEqual(period.dayIndex(for: context.dayKey(context.day(offset: -1))), 3)
+        XCTAssertEqual(period.dayIndex(for: try XCTUnwrap(timeline.last)), 4)
+        XCTAssertNil(period.dayIndex(for: context.dayKey(mouseOnlyDay)))
+        XCTAssertNil(manager.localSyncHistorySnapshot()[context.dayKey(first)])
+        XCTAssertEqual(context.defaults.dictionaryRepresentation() as NSDictionary, before)
     }
 
     private func makeContext(timeZone: TimeZone = .current) throws -> StatsManagerTestContext {

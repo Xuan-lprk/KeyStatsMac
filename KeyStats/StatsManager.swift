@@ -1651,6 +1651,32 @@ extension StatsManager {
         return totalStats
     }
 
+    /// Uses the same global display history as Heatmap/All-Time, including current
+    /// unsaved data and configured remote shards. Normalization reuses historical key identity.
+    /// Derived on demand: no save, cache, scheduling or persistence.
+    func cumulativeKeyboardTimeline() -> [CumulativeKeyboardSnapshot] {
+        assert(Thread.isMainThread)
+        return CumulativeKeyboardTimeline.build(history: normalizedHistory(displayHistorySnapshot()))
+    }
+
+    func cumulativeKeyboardSnapshot(asOf date: Date) -> CumulativeKeyboardSnapshot? {
+        assert(Thread.isMainThread)
+        return CumulativeKeyboardTimeline.snapshot(
+            asOf: dateFormatter.string(from: environment.calendar().startOfDay(for: date)),
+            history: normalizedHistory(displayHistorySnapshot())
+        )
+    }
+
+    /// Shares normalized global display history with cumulative keyboard snapshots.
+    func keyboardTrackingPeriod() -> KeyboardTrackingPeriod? {
+        assert(Thread.isMainThread)
+        return KeyboardTrackingPeriod(
+            history: normalizedHistory(displayHistorySnapshot()),
+            calendar: environment.calendar(),
+            dateKeyFormatter: dateFormatter
+        )
+    }
+
     /// Returns the current device's writable history only. Remote shards are never included.
     func localSyncHistorySnapshot() -> [String: DailyStats] {
         statsStateLock.lock()
