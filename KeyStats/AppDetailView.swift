@@ -21,7 +21,7 @@ final class AppDetailViewController: NSViewController {
             self.presentingViewController?.dismiss(self)
         })
         addChild(host)
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 820, height: 690))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 820, height: 800))
         preferredContentSize = view.frame.size
         host.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(host.view)
@@ -45,12 +45,13 @@ private struct AppDetailView: View {
     @State private var ranksVisible = false
     @State private var rowsVisible = false
     @State private var started = false
+    @State private var showsHeatmap = true
 
     private let accents: [Color] = [.blue, .green, .orange]
     private func text(_ key: String) -> String { NSLocalizedString(key, comment: "") }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             hero
             VStack(alignment: .leading, spacing: 5) {
                 Text(text("appDetail.profile")).font(.title3.weight(.semibold))
@@ -62,14 +63,14 @@ private struct AppDetailView: View {
                     card(snapshot.cards[index], index: index)
                 }
             }
-            breakdown
+            keyboardDetails
             HStack {
                 Spacer()
                 Button(text("appStats.breakdown.close"), action: close)
                     .keyboardShortcut(.cancelAction)
             }
         }
-        .padding(24)
+        .padding(20)
         .background(Color(nsColor: .windowBackgroundColor))
         .task {
             guard !started else { return }
@@ -157,7 +158,7 @@ private struct AppDetailView: View {
             Text(item.reference).font(.system(size: 10)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, minHeight: 156, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
         .padding(14)
         .background {
             if reduceTransparency {
@@ -193,14 +194,63 @@ private struct AppDetailView: View {
         }.frame(height: 12).accessibilityHidden(true)
     }
 
+    private var keyboardDetails: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Picker(text("appDetail.keyboardView"), selection: $showsHeatmap) {
+                Text(text("keyboardHeatmap.title")).tag(true)
+                Text(text("appDetail.breakdownTab")).tag(false)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .accessibilityLabel(text("appDetail.keyboardView"))
+
+            Text(snapshot.breakdownSummary).font(.caption).foregroundStyle(.secondary)
+            if let notice = snapshot.breakdownNotice, snapshot.heatmap.coverage == .partial {
+                Text(notice).font(.caption).foregroundStyle(.secondary)
+            }
+
+            ZStack {
+                if showsHeatmap {
+                    heatmap.transition(.opacity)
+                } else {
+                    breakdown.transition(.opacity)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: showsHeatmap)
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .opacity(reduceMotion || rowsVisible ? 1 : 0)
+        .offset(y: reduceMotion || rowsVisible ? 0 : 8)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: rowsVisible)
+    }
+
+    private var heatmap: some View {
+        VStack(spacing: 8) {
+            Text(text("appDetail.heatmap.explanation"))
+                .font(.caption).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if let messageKey = snapshot.heatmap.emptyMessageKey {
+                VStack(spacing: 12) {
+                    Text(text(messageKey)).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button(text("appDetail.heatmap.viewBreakdown")) { showsHeatmap = false }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                KeyboardHeatmapRepresentable(keyCounts: snapshot.heatmap.counts)
+                    .frame(minHeight: 260, maxHeight: 320)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(text("keyboardHeatmap.title"))
+                    .accessibilityValue(text("appDetail.heatmap.explanation"))
+                    .accessibilityHint(text("appDetail.heatmap.accessibilityHint"))
+            }
+        }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
     private var breakdown: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(text("section.keyBreakdown")).font(.headline)
-                Spacer()
-                Text(snapshot.breakdownSummary).font(.caption).foregroundStyle(.secondary)
-            }
-            if let notice = snapshot.breakdownNotice {
+            if let notice = snapshot.breakdownNotice, snapshot.heatmap.coverage != .partial {
                 Text(notice).font(.caption).foregroundStyle(.secondary)
             }
             HStack {
@@ -233,9 +283,6 @@ private struct AppDetailView: View {
                 }
             }.frame(maxHeight: .infinity)
         }
-        .opacity(reduceMotion || rowsVisible ? 1 : 0)
-        .offset(y: reduceMotion || rowsVisible ? 0 : 8)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: rowsVisible)
         .frame(maxHeight: .infinity, alignment: .top)
     }
 }

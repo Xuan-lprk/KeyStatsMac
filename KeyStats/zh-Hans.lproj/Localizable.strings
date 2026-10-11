@@ -386,3 +386,12 @@
 "appDetail.days" = "活跃 %@ 天";
 "appDetail.cohort" = "参考：%@ 个有活动的应用";
 "appDetail.scrollCohorts" = "参考应用数 · 距离：%@ · 会话：%@";
+
+/* Per-App Keyboard Heatmap */
+"appDetail.keyboardView" = "键盘视图";
+"appDetail.breakdownTab" = "按键明细";
+"appDetail.heatmap.explanation" = "颜色表示此应用在当前时间范围内各键的相对使用频率。";
+"appDetail.heatmap.unavailable" = "此历史范围没有可用的按键明细。";
+"appDetail.heatmap.unsupported" = "当前键盘布局无法显示这些按键，请查看按键明细。";
+"appDetail.heatmap.viewBreakdown" = "查看按键明细";
+"appDetail.heatmap.accessibilityHint" = "切换到按键明细，可查看全部已记录的键名及准确次数。";

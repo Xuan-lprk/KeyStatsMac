@@ -386,3 +386,12 @@
 "appDetail.days" = "活躍 %@ 天";
 "appDetail.cohort" = "參考：%@ 個有活動的應用";
 "appDetail.scrollCohorts" = "參考應用數 · 距離：%@ · 階段：%@";
+
+/* Per-App Keyboard Heatmap */
+"appDetail.keyboardView" = "鍵盤檢視";
+"appDetail.breakdownTab" = "按鍵明細";
+"appDetail.heatmap.explanation" = "顏色表示此應用在目前時間範圍內各鍵的相對使用頻率。";
+"appDetail.heatmap.unavailable" = "此歷史範圍沒有可用的按鍵明細。";
+"appDetail.heatmap.unsupported" = "目前鍵盤配置無法顯示這些按鍵，請查看按鍵明細。";
+"appDetail.heatmap.viewBreakdown" = "查看按鍵明細";
+"appDetail.heatmap.accessibilityHint" = "切換到按鍵明細，可查看全部已記錄的鍵名及準確次數。";

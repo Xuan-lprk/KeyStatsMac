@@ -543,9 +543,19 @@ final class StatsManagerTests: XCTestCase {
             XCTAssertEqual(profile.keyboard.cohortSize, 2)
             XCTAssertEqual(profile.keyboard.score, 0.25)
             let snapshot = AppDetailPresentation(app: app, profiles: [profile],
-                                                 rangeTitle: String(describing: range))
+                                                 rangeTitle: String(describing: range),
+                                                 supportedHeatmapKeys: ["LeftCmd", "RightCmd", "C", "Return", "Z"])
             XCTAssertEqual(snapshot.rangeTitle, String(describing: range))
             XCTAssertEqual(snapshot.cards[0].score, 0.25)
+            let expectedHeatmap: [String: Int]
+            switch range {
+            case .today, .week: expectedHeatmap = ["LeftCmd": 2, "C": 2]
+            case .month: expectedHeatmap = ["LeftCmd": 2, "RightCmd": 3, "C": 5]
+            case .all: expectedHeatmap = ["LeftCmd": 2, "RightCmd": 3, "C": 5, "Return": 4]
+            }
+            XCTAssertEqual(snapshot.heatmap.counts, expectedHeatmap)
+            XCTAssertEqual(snapshot.heatmap.coverage, coverage)
+            XCTAssertNil(snapshot.heatmap.counts["Z"])
             XCTAssertEqual(context.defaults.dictionaryRepresentation() as NSDictionary, defaultsBefore)
             let detail = AppKeyBreakdown(appStats: app)
             XCTAssertEqual(detail.totalKeyPresses, total)

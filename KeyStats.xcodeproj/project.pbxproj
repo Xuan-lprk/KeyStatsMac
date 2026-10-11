@@ -34,6 +34,7 @@
 		B1000091 /* InteractionProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000091 /* InteractionProfile.swift */; };
 		B1000093 /* AppDetailPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000093 /* AppDetailPresentation.swift */; };
 		B1000095 /* KeyboardHeatmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000095 /* KeyboardHeatmapView.swift */; };
+		B1000096 /* KeyboardHeatmapRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000096 /* KeyboardHeatmapRepresentable.swift */; };
 		B1000097 /* PhysicalKeyMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000097 /* PhysicalKeyMapping.swift */; };
 		B1000098 /* KeyboardLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000098 /* KeyboardLayout.swift */; };
 		B1000094 /* AppDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000094 /* AppDetailView.swift */; };
@@ -113,6 +114,7 @@
 		B2000091 /* InteractionProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractionProfile.swift; sourceTree = "<group>"; };
 		B2000093 /* AppDetailPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDetailPresentation.swift; sourceTree = "<group>"; };
 		B2000095 /* KeyboardHeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHeatmapView.swift; sourceTree = "<group>"; };
+		B2000096 /* KeyboardHeatmapRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHeatmapRepresentable.swift; sourceTree = "<group>"; };
 		B2000097 /* PhysicalKeyMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicalKeyMapping.swift; sourceTree = "<group>"; };
 		B2000098 /* KeyboardLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLayout.swift; sourceTree = "<group>"; };
 		B2000094 /* AppDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDetailView.swift; sourceTree = "<group>"; };
@@ -202,6 +204,7 @@
 				B2000091 /* InteractionProfile.swift */,
 				B2000093 /* AppDetailPresentation.swift */,
 				B2000095 /* KeyboardHeatmapView.swift */,
+				B2000096 /* KeyboardHeatmapRepresentable.swift */,
 				B2000097 /* PhysicalKeyMapping.swift */,
 				B2000098 /* KeyboardLayout.swift */,
 				B2000094 /* AppDetailView.swift */,
@@ -408,6 +411,7 @@
 				B1000091 /* InteractionProfile.swift in Sources */,
 				B1000093 /* AppDetailPresentation.swift in Sources */,
 				B1000095 /* KeyboardHeatmapView.swift in Sources */,
+				B1000096 /* KeyboardHeatmapRepresentable.swift in Sources */,
 				B1000097 /* PhysicalKeyMapping.swift in Sources */,
 				B1000098 /* KeyboardLayout.swift in Sources */,
 				B1000094 /* AppDetailView.swift in Sources */,

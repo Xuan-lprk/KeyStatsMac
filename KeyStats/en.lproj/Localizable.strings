@@ -386,3 +386,12 @@
 "appDetail.days" = "%@ active days";
 "appDetail.cohort" = "Reference: %@ apps with activity";
 "appDetail.scrollCohorts" = "Reference apps · distance: %@ · sessions: %@";
+
+/* Per-App Keyboard Heatmap */
+"appDetail.keyboardView" = "Keyboard view";
+"appDetail.breakdownTab" = "Key Breakdown";
+"appDetail.heatmap.explanation" = "Colors show relative key usage within this app and time range.";
+"appDetail.heatmap.unavailable" = "Key details aren't available for this historical range.";
+"appDetail.heatmap.unsupported" = "The recorded keys can't be shown on this keyboard layout. View Key Breakdown for details.";
+"appDetail.heatmap.viewBreakdown" = "View Key Breakdown";
+"appDetail.heatmap.accessibilityHint" = "Switch to Key Breakdown for the full list of recorded key names and exact counts.";

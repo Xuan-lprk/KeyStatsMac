@@ -292,7 +292,8 @@ final class AppStatsViewController: NSViewController {
         let snapshot = AppDetailPresentation(
             app: app,
             profiles: StatsManager.shared.interactionProfiles(range: selectedRange()),
-            rangeTitle: rangeControl.label(forSegment: rangeControl.selectedSegment) ?? ""
+            rangeTitle: rangeControl.label(forSegment: rangeControl.selectedSegment) ?? "",
+            supportedHeatmapKeys: KeyboardHeatmapView.supportedKeyIDs
         )
         let detail = AppDetailViewController(snapshot: snapshot, icon: appIcon(for: app.bundleId))
         presentAsSheet(detail)

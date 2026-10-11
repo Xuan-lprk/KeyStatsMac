@@ -26,6 +26,7 @@ struct AppDetailPresentation {
     let metadata: String
     let cards: [Card]
     let rows: [Row]
+    let heatmap: AppKeyboardHeatmapSnapshot
     let breakdownSummary: String
     let breakdownNotice: String?
 
@@ -35,6 +36,7 @@ struct AppDetailPresentation {
     }
 
     init(app: AppStats, profiles: [InteractionProfile], rangeTitle: String,
+         supportedHeatmapKeys: Set<String>,
          bundle: Bundle = .main, locale: Locale = .current) {
         func text(_ key: String) -> String { NSLocalizedString(key, bundle: bundle, comment: "") }
         func format(_ key: String, _ args: String...) -> String {
@@ -99,6 +101,10 @@ struct AppDetailPresentation {
                                    number(Double(scroll?.sessions.cohortSize ?? 0))))
         ]
         let breakdown = AppKeyBreakdown(appStats: app)
+        // Raw counts preserve side-specific modifiers; Breakdown entries deliberately do not.
+        heatmap = AppKeyboardHeatmapSnapshot(rawCounts: app.keyPressCounts,
+                                             coverage: breakdown.coverage,
+                                             supportedKeys: supportedHeatmapKeys)
         let maximum = breakdown.entries.first?.count ?? 0
         rows = breakdown.entries.map {
             Row(id: $0.key, label: AppKeyBreakdown.displayKey($0.key, bundle: bundle),
@@ -106,5 +112,36 @@ struct AppDetailPresentation {
         }
         breakdownSummary = breakdown.summaryText(bundle: bundle, locale: locale)
         breakdownNotice = breakdown.noticeLocalizationKey.map(text)
+    }
+}
+
+/// No persistence or UI dependencies. The actual renderer supplies its supported key IDs.
+struct AppKeyboardHeatmapSnapshot {
+    let counts: [String: Int]
+    let coverage: AppKeyBreakdown.Coverage
+
+    var emptyMessageKey: String? {
+        switch coverage {
+        case .noActivity: return "appStats.breakdown.noActivity"
+        case .unavailable: return "appDetail.heatmap.unavailable"
+        case .complete, .partial:
+            return counts.isEmpty ? "appDetail.heatmap.unsupported" : nil
+        }
+    }
+
+    init(rawCounts: [String: Int], coverage: AppKeyBreakdown.Coverage, supportedKeys: Set<String>) {
+        self.coverage = coverage
+        counts = keyboardHeatmapCounts(from: rawCounts).filter { supportedKeys.contains($0.key) }
+    }
+}
+
+/// One previous snapshot per mounted bridge, including an initially empty snapshot.
+struct KeyboardHeatmapApplyState {
+    private var previous: [String: Int]?
+
+    mutating func accept(_ counts: [String: Int]) -> Bool {
+        guard previous != counts else { return false }
+        previous = counts
+        return true
     }
 }

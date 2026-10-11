@@ -34,6 +34,7 @@ let package = Package(
                 "AppStatsViewController.swift",
                 "AppDetailView.swift",
                 "KeyboardHeatmapView.swift",
+                "KeyboardHeatmapRepresentable.swift",
                 "KeyStats.entitlements",
                 "NotificationManager.swift",
                 "StatsManagerLiveEnvironment.swift",
