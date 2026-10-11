@@ -1,291 +1,246 @@
 # KeyStatsMac 项目状态
 
-`PROJECT.md` 用于记录 KeyStatsMac 当前的产品方向、技术基础、已完成差异和阶段性决策。它不是面向用户的安装说明，也不是按提交排列的 changelog。
+核对日期：2026-10-12。本文以当前源码、Git 提交和本地工作区为准，不把“已实现”视为“已发布”。
 
-## 项目定位
+本文记录产品状态、与继承基础的差异和技术决策；开发约束见 [AGENTS.md](AGENTS.md)，技术资料入口见 [docs/README.md](docs/README.md)，实验操作说明见各 prototype 的 README。
 
-KeyStatsMac 正在从一个键鼠统计工具逐步发展为：
+## 项目定位与边界
 
 > 隐私优先、低功耗的 macOS 物理交互统计与可视化工具。
 
-长期方向包括：
+当前在成熟 upstream 基础上发展分应用展示和长期累计键盘可视化，不重写输入后端。用户可见 UI 可以逐页使用 SwiftUI，AppKit shell 和稳定后端继续保留。
 
-- 键盘、鼠标及可通过公开 API 可靠获取的其他物理交互统计。
-- 长期累计数据的高质量可视化。
-- Keyboard Visualization / Growth Keyboard。
-- History Replay。
-- Interaction Profile。
-- 分应用交互统计。
-- Privacy Center。
-- 用户可见 UI 逐步迁移到 SwiftUI。
-- 后台长期运行保持低 CPU、低内存、低 wakeups 和低磁盘写入。
+- 这不是 keylogger：不记录实际输入文本、按键顺序、可重建内容的原始输入序列、点击坐标或完整鼠标轨迹。
+- 采集和保存的是聚合统计，不通过新功能增加原始输入历史。
+- 本地交互统计与产品 Analytics 严格分离；PostHog 不接收键鼠统计、分应用数据或用户 App 列表。
+- 准确统计、易读性和低功耗优先；视觉只在用户查看时消耗额外性能。
+- History Replay 的目标是回看每日聚合后的累计状态，不是回放原始按键。
 
-KeyStatsMac 不是 keylogger。产品边界是：
+## 当前交付状态
 
-- 不记录用户实际输入的文本。
-- 不记录按键顺序，不保存可重建用户内容的原始输入序列。
-- 不保存鼠标点击坐标或完整鼠标轨迹。
-- 键盘、鼠标和分应用交互数据以聚合统计形式保存在本地，主要用于展示给用户自己。
-- PostHog 只用于了解用户如何使用 KeyStatsMac 产品本身，不上传本地键鼠统计、分应用统计或历史交互数据。
+### 已提交的基础与产品能力
 
-## 从 upstream 继承的基础
+本轮整理前的基础提交为 `4edf43f`（2026-09-19，提交说明 `+Interaction Profile v0`）。提交名称不等于实际覆盖范围：
 
-当前项目基于 [`debugtheworldbot/keyStats`](https://github.com/debugtheworldbot/keyStats)。成熟后端和主要产品能力来自 upstream，包括：
+| 提交 | 日期 | 实际内容摘要 |
+| --- | --- | --- |
+| `1e1ed8c` | 2026-09-01 | 菜单栏 100ms coalescing、测试补强、仓库文档卫生 |
+| `f3d20fa` | 2026-09-06 | 真实 StatsManager 的 Environment 注入和隔离测试 |
+| `608f425` | 2026-09-06 | 跨日 pending-save 数据保全、历史日期 identity 修复 |
+| `9cbc317` | 2026-09-17 | Interaction Profile 纯计算器、System Media Keys、vendored Helper 同步 |
+| `4edf43f` | 2026-09-19 | Per-App Key Breakdown、App Detail Dashboard、Profile UI 和日期范围查询接线 |
 
-- `KeyStatsHelper`。
-- listen-only `CGEventTap`。
-- Helper → XPC → 主 App 的输入事件链路。
-- Accessibility / TCC 权限流程。
-- 键盘总量与每键统计。
-- 鼠标点击统计。
-- 鼠标移动距离与滚动距离。
-- KPS / CPS。
-- 分应用聚合统计。
-- 每日数据、历史数据与持久化兼容逻辑。
-- Keyboard Heatmap。
-- All-Time Stats / App Stats。
-- Sparkle 更新基础。
-- E2EE 多设备同步基础。
+Analytics consent、PID cache 生命周期、per-app key counts、Scroll Session 和 identifier 整理也已存在于提交历史中；不是当前待提交的新功能。
 
-这些能力是 KeyStatsMac 的稳定起点，不应被误写成 KeyStatsMac 新增功能，也不应仅为了“现代化”而重写。
+### 本轮分组保存的已实现能力
 
-## KeyStatsMac 相比 upstream 的已完成改动
+| 能力 | 当前状态 | 边界 |
+| --- | --- | --- |
+| Per-App Keyboard Heatmap | 已接入 App Detail，和 Key Breakdown 分页切换 | 共享原有 AppKit renderer，不新增采集或 schema |
+| Physical Key Mapping | 纯数据层；旧 Heatmap 函数改为薄 adapter | 修复 literal `+` / `Cmd++`，保留 unsupported |
+| Keyboard Layout Model | 固定 Mac-style 布局，2D renderer 已读取它 | 6 行、77 个键帽；不支持布局变体 |
+| Cumulative Keyboard Snapshot | 纯累计计算和 StatsManager display-history 查询 | 按需派生，不持久化，不自动刷新 |
+| First Tracked Day / Day Index | 纯日历日语义及 StatsManager 查询 | 不是 active-day count |
+| Stable Count → Progress | 固定 count-only 曲线及测试 | 不替换现有相对 Heatmap normalization |
+| Keyboard Atelier | 独立 prototype，保留 Porcelain v1 / v2 | 未进入正式 App 页面、主工程或发布流程 |
+
+上述能力按共享键盘底座、Per-App Heatmap、累计快照与日期语义、Stable Progress、独立 Atelier prototype 分组保存为本地提交。相关新增 Swift 文件和 Xcode / SwiftPM 注册一起提交；已提交不代表已发布，Atelier 仍未接入正式产品。
+
+## 继承基础与稳定输入链路
+
+项目基于 [debugtheworldbot/keyStats](https://github.com/debugtheworldbot/keyStats)。这里的 upstream 差异指项目继承时的基础，不宣称已对照远端最新版本。
+
+继承能力包括 Helper / CGEventTap / XPC / 权限、全局键位和组合键计数、鼠标点击与距离、scroll distance、KPS/CPS、每日历史、全局 Keyboard Heatmap / Key Breakdown、App Stats 基础、Sparkle 和 E2EE Sync。
+
+正式采集链路不变：
+
+```text
+macOS events
+→ KeyStatsHelper / EventTapController
+→ PayloadBuilder / HelperXPCListener
+→ XPC / HelperXPCClient
+→ RemoteEventProcessor
+→ StatsManager
+→ 本地聚合与持久化 / UI
+```
+
+不存在主 App 的 InputMonitor 采集架构。除明确缺陷或需求外，不重写 Helper、XPC、StatsManager、持久化兼容和权限处理。
+
+## KeyStatsMac 的已完成差异
 
 ### Analytics Consent
 
-Upstream 在 App 启动时默认初始化 PostHog。KeyStatsMac 新增集中式 `AnalyticsManager`：
-
-- consent key 为 `analytics.optIn.v1`。
-- 默认关闭；key 不存在时视为未授权。
-- 只有用户主动 opt-in 后才初始化 PostHog。
-- Analytics 关闭时所有 tracking 调用安全 no-op。
-- 所有事件统一经过 `AnalyticsManager`，不得绕过它直接调用 PostHog SDK。
-- Analytics 不允许包含本地键鼠统计、分应用交互统计或用户使用的 App 列表。
-
-目前只有后端 consent 机制，尚未实现 Settings UI 开关。
+`AnalyticsManager` 是唯一 PostHog 入口。consent key 为 `analytics.optIn.v1`，缺失即 false；关闭时不初始化 SDK、不发送事件，tracking 安全 no-op。当前仍未提供正式 Settings 开关 UI。
 
 ### Menu Bar Update Coalescing
 
-Upstream：
+继承实现每个统计事件都触发菜单栏 SwiftUI / NSStatusItem 刷新；当前统计逐事件精确更新，菜单栏最高约 10Hz，首次可立即更新，burst 合并后读取最新统计，不使用常驻 repeating timer。
 
-- 每次键盘或鼠标统计事件都会直接触发菜单栏 SwiftUI / `NSStatusItem` 刷新。
+原有 `numericText` 和数字 animation 已保留；移除动画、layout/publication deduplication 是定位阶段实验，不作为最终修复能力。
 
-KeyStatsMac：
+此前真人 Instruments 开发测试中，快速输入从约 43% 单核 CPU，降至一次选定 12 秒区间中约 71ms CPU Weight，即约 0.6% 平均单核 CPU。该结果是 Debug + 特定真人 workload，不是 Release benchmark，也不是本轮重测。
 
-- 统计仍逐事件准确处理。
-- 菜单栏 UI 刷新合并到最高约 10 Hz。
-- burst 期间刷新时读取最新统计，不丢失统计数据。
-- 不使用常驻 10 Hz timer，idle 时不产生额外周期 wakeup。
-- 真人 Instruments 测试中，快速输入时主 App CPU 从修改前约 43% 单核 CPU，降至一次选定 12 秒输入区间中的约 0.6% 平均单核 CPU。
-- 上述数值来自 Debug 构建和真人 workload 的开发测试，不作为正式 Release benchmark。
+### App Attribution / Per-App Key Distribution
 
-### App Attribution Reliability
+- `AppActivityTracker` 监听 App termination，按 PID 和 bundle ID 清理对应缓存，避免迟到通知误删复用 PID；保留 display-name cache。
+- `AppStats.keyPressCounts` 与总量一起累计，复用 canonical naming；旧 JSON 缺失字段时为空字典。
+- history、import/merge 和 `appStatsSummary(range:)` 保留并聚合 per-key 数据。
+- per-app 数据不进入 Analytics 或新增 Sync 字段。
 
-Upstream 的 `AppActivityTracker` 会缓存 PID 到 App identity 的映射，但不会在 App 退出时及时清理，存在 macOS 复用 PID 后错误归因的风险。
+### App Detail Dashboard / Key Breakdown / Per-App Heatmap
 
-KeyStatsMac 已：
+App Stats 的 App 名称区域与 disclosure 入口打开原生 sheet；AppKit shell 内使用 SwiftUI 内容。关闭时由 presenter dismiss，清理 presentation state，避免关掉一次后无法再打开。
 
-- 监听 `NSWorkspace.didTerminateApplicationNotification`。
-- App 退出时清理对应 PID cache。
-- 同时匹配 PID 和 bundle ID，避免迟到的退出通知误删已被新进程复用的 PID。
-- 保留可安全复用的 bundle ID → display name cache。
-- 为缓存清理和 PID reuse 场景补充测试。
+- Today / Last 7 Days / Last 30 Days / All Time 沿用现有范围。
+- App 的总量和 per-key 数据来自 `appStatsSummary(range:)`，Profile 来自同范围的 `interactionProfiles(range:)`。
+- Key Breakdown 展示完整可用列表，不是 Top N；按次数降序、键名稳定打破平局。
+- 左右修饰键仅在 Breakdown 展示整理中合并；literal `+`、组合键和 Fn aliases 保持完整事件语义。
+- 方向键仅在展示层本地化为 Left Arrow 等，不修改 canonical 存储。
+- coverage 根据 named event counts 与权威 total 判断。无活动、旧数据无明细、部分明细分开显示；不伪造缺失历史。
+- 完整 coverage 只显示总次数；不完整时显示可用明细数量并说明旧历史缺失。
+- 当前 Per-App Heatmap 直接使用原始 `AppStats.keyPressCounts`，不从整理后的 Breakdown rows 反推。
+- Heatmap / Breakdown 可切换；Heatmap 默认显示。无明细或只有布局不支持的键时给出说明并引导查看 Breakdown。
+- 英文、简体和繁体文案均存在。sheet 使用打开时 snapshot，没有持续输入订阅或常驻刷新 timer。
 
-### Per-App Key Distribution
-
-Upstream 的 `AppStats` 只有每个 App 的按键总量等聚合数据。KeyStatsMac 新增：
-
-- `keyPressCounts: [String: Int]`。
-- 全局每键计数增加时，对应 App 的每键计数同步增加。
-- 复用现有 canonical key naming，不建立第二套键名体系。
-- 旧 JSON 缺少该字段时解码为空字典。
-- 只保存累计计数，不记录顺序、时间戳序列、输入文本或原始事件历史。
-
-该数据为未来 per-app Keyboard Heatmap 和 Interaction Profile 提供基础，目前没有新增 UI、Analytics 或 Sync 字段。
-
-### Scroll Session
-
-Upstream 已有 `scrollWheel` 事件链路和 scroll distance 统计。KeyStatsMac 在此基础上新增的是 **Scroll Session 聚合计数**，不是“新增滚动统计”。
-
-- Helper 通过 CoreGraphics 读取 scroll phase、momentum phase 和 continuous 标记。
-- phase 数据沿用现有 Helper → XPC → `RemoteEventProcessor` → `StatsManager` 链路。
-- 一次 `began → changed… → ended` 只记为 1 个 session。
-- 多个 `changed` 不重复计数。
-- momentum 属于原 session，不创建第二个 session。
-- cancelled 和缺少对应 began 的 ended 不计数。
-- `DailyStats` 和 `AppStats` 均保存累计 `scrollSessions`，旧 JSON 默认解码为 0。
-- 沿用延迟持久化，不增加 Timer、global monitor 或额外保存频率。
-
-真实运行已验证：
-
-- Finder 单次滚动准确增加 1。
-- Chrome 两次明确分开的滚动准确增加 2。
-- 分应用归因正确，原有 scroll distance 正常增加。
-- App 重启后从持久化值继续累计。
-
-**Scroll Session 不等于 Trackpad Gesture。** 公开 API 无法可靠区分 Trackpad、Magic Mouse 和其他支持连续精确滚动的设备，因此产品和代码均不把它命名为 Trackpad Scroll。
+App Stats / Profile 仍使用本机分应用历史；不能把它和下文包含远端 shard 的全局 display-history 语义混为一谈。
 
 ### Interaction Profile v0
 
-- `InteractionProfileCalculator.calculate(days:)` 从每天一份本地完整 snapshot 纯派生计算三个独立相对排名，不读取存储、不持久化、不接入采集/UI/Analytics/Sync。
-- 使用 positive-only mid-rank percentile，零值不进入 cohort，ties 同分；返回原始值、活跃天数、观察天数及 comparability。
-- Keyboard 使用 `keyPresses`；Pointer 仅使用 clicks，当前没有 per-app mouseDistance；Scroll 平均有正值的 distance/session 排名，保留两个组件的证据。
-- score 不是绝对强度、使用时间占比或交互构成比例；不得据此跨维度贴 Keyboard-heavy 等标签。
-- 已通过 deterministic tests 与本地只读预览。下一步仅在明确产品需求下接入展示。
+纯计算器已接入 App Detail 卡片，不再是“只有数据层、没有 UI”：
 
-### System Media Keys（源码已实现，待真机验收）
+- positive-only mid-rank percentile；零值不进入 cohort，ties 同分。
+- Keyboard 使用 keyPresses；Pointer 仅使用 totalClicks，当前没有 per-app mouseDistance。
+- Scroll 对有正值的 distance/session 排名取平均，保留两个 raw components 与 cohort evidence。
+- UI 对无活动和不可排名状态显示说明，不把单样本 0.5 当成可信排名。
+- 三个 score 是各维度在当前用户 App 中的独立相对排名，不是交互构成比例，不生成 Keyboard-heavy 等标签。
+- 按需计算，不持久化，不新增采集、Analytics 或 Sync schema。
 
-- 原有 F1…F19 普通键映射保留。亮度、音量、静音、播放控制及键盘背光使用各自语义键名，例如 `BrightnessDown`、`VolumeUp`，不假定硬件 F1/F12 位置。
-- 在原有 Helper listen-only EventTap 增加 `NX_SYSDEFINED`；通过公开 `NSEvent` bridge 读取 auxiliary-control 事件，仅白名单内首次 key-down 进入 XPC，松开及长按 repeat 被过滤。
-- 不新增监听器、Timer、私有 API 或原始事件历史。复用现有全局按键计数与延迟持久化；系统操作没有可靠目标 App，暂不写入 per-app counts。
-- XPC 方法及 interface version 不变，仅新增可选 `mediaKeyCode` 字段；旧主 App 忽略未知事件，旧 Helper 不提供新能力。
-- Helper 源码变化会改变构建产物 cdhash。未安装/替换运行中的 Helper，未修改 identifier、签名设置或 TCC；必须使用新构建做真机短按/长按、Fn+F 键和权限连续性验证。
-- `vendor/` 预签名 Helper 尚未更新；现有 DMG 脚本会用它覆盖新构建的 Helper，因此发布前需单独更新并验证 vendored Helper，不能把当前 DMG 当作已包含此功能。
+### Scroll Session
 
-### Keyboard Interaction Signature（可行性调查，未实现）
+沿用原有 scrollWheel 和 scroll distance 链路，读取公开 CGEvent phase / momentum / continuous 字段。`began → changed… → ended` 计 1 次；momentum 不另计，cancelled 或无 began 的 ended 不计。
 
-- 只考虑已有 per-app `keyPressCounts` 的类别比例，不读取顺序、不推断文字、不新增采集或持久化。
-- 初步类别为 printable-key、command/control combination、navigation、editing/control、other。Shift+可打印键仍属于 printable-key；Option/Fn+可打印键因布局/IME 歧义暂归 other。
-- 可打印键不等于文本输入，不能命名为 Text Entry；Cmd/Ctrl 组合也只代表组合形式，不能证明执行了某个快捷操作。
-- 2026-09-01 至 09-07 的只读分类预览显示部分 App 分布有差异，但 Notes/Terminal 等样本很少；未来展示必须带计数覆盖率、命名事件数量和活跃天数。
-- 分类只在本次调查中演算，尚未增加 classifier、API 或产品标签。
+`DailyStats` / `AppStats.scrollSessions` 旧数据默认 0，沿用 delayed persistence。此前 Finder 1 次、Chrome 2 次、归因与重启持久化已做真机开发验证，不是本轮重测。App Detail 的 Scroll evidence 已展示 session 数；App Stats 主列表没有独立 session 列。
+
+这不是 Trackpad Gesture：公开 API 不能可靠区分触控板、Magic Mouse 等连续滚动设备，不使用设备猜测或无 phase 的超时拼接。
+
+### System Media Keys / Vendored Helper
+
+- 原有普通 F-key 路径保留；亮度、音量、静音、播放及键盘背光采用独立语义名，不能把 BrightnessUp 等当成 F2/F12。
+- 原有 listen-only tap 增加 NX_SYSDEFINED，经公开 NSEvent bridge 和白名单过滤；只记录首次 key-down，过滤 key-up / repeat。
+- 可选 `mediaKeyCode` payload 复用既有 XPC 接口；只进入全局统计，不错误归因到当前 App。
+- 全局 Key Breakdown 可展示名字；固定键盘布局没有对应键帽，Physical Mapping 保留为 unsupported。
+- 此前已完成主要亮度、音量、播放键开发真机验证；不等于所有硬件键、Fn 路径和升级权限场景都验证完毕，本轮没有重测真实输入。
+- vendored Helper 已在 `9cbc317` 中更新，不再是“源码有、vendor 旧”。当前记录 cdhash 为 `7d49543089f6c0ef30751f56e2dfd6554634919d`。
+- DMG 流程先校验 vendor，再覆盖 Xcode 嵌入的 Helper；hash 一致只证明 bundle 与记录一致，不代替未来源码/产物同步和真机验证。
 
 ### StatsManager Testability / Persistence Reliability
 
-真实 `StatsManager` 已进入 SwiftPM 测试目标，不再依赖复制出来的简化实现：
+- 真实 StatsManager 进入 SwiftPM；Environment 注入隔离 UserDefaults、clock、calendar、date formatter 与调度/副作用。
+- 正式 singleton 和 live-only 连接位于 `StatsManagerLiveEnvironment.swift`；仍使用 standard defaults、原有调度和未额外冻结 calendar/timezone 的 DateFormatter。
+- rollover 在替换 currentStats 前归档上一日完整最新 snapshot，不依赖 delayed-save 已执行。
+- 合法 yyyy-MM-dd history key 是记录当时的本地日期 identity，内部 date 与 key 对齐；非法 key 才 fallback。
+- 每日记录是完整 snapshot，不是 additive fragment；normalization collision 不 merge。合法 key 优先，多个非法 key 按原 key 字典序选择第一个。
 
-- `StatsManager.Environment` 可注入独立 `UserDefaults`、固定 clock / calendar / date-key formatter，并可关闭测试中的自动调度。
-- 正式 App 的 singleton 与 live-only 副作用集中在 `StatsManagerLiveEnvironment.swift`；`.live` 仍使用 `UserDefaults.standard` 和改造前一致的默认 `DateFormatter` 行为。
-- 跨日 rollover 会在替换 `currentStats` 前，把 delayed-save 窗口内上一日的最新完整 snapshot 写回 history；新一天从本次输入正常开始，不重复计数。
-- 合法的 `yyyy-MM-dd` history key 现在被视为记录产生时的本地日期身份，不会因为当前时区变化而仅依据内部 `DailyStats.date` 改写 key。
-- `DailyStats` history entry 是完整累计 snapshot，不是 additive fragment；normalization collision 不做 merge。
-- 非法 key 仍回退到内部日期；fallback collision 使用确定性规则：合法 key 优先，多个非法 key 按原 key 字典序选择第一个。
+## 共享键盘数据层：职责与语义
 
-截至 2026-09-06，完整 `swift test` 为 114 个测试通过，Debug build 成功，`git diff --check` 通过。测试数量是当前快照，不是永久保证。
+```text
+全局 display-aggregated daily history
+→ CumulativeKeyboardTimeline / CumulativeKeyboardSnapshot
+→ canonical whole-event keyPressCounts
+→ PhysicalKeyMapping
+→ physical participation counts → KeyboardUsageProgress
+                         KeyboardLayout → renderer
 
-### Trackpad Feasibility Research
+本机 AppStats range summary
+→ AppKeyBreakdown → 完整组合键列表
+→ PhysicalKeyMapping + KeyboardLayout → 共享 2D Heatmap
+```
 
-已在主仓库之外完成独立 `TrackpadProbe` 技术验证，未接入 KeyStatsMac 正式代码。
+### PhysicalKeyMapping
 
-结论为“部分值得”：
+输入聚合键名和计数，返回 `counts` / `unsupported`。一次 Cmd+C 分别增加 Cmd 与 C；物理键参与数之和可以高于事件总量。
 
-- 公开 API 可以在后台可靠获取普通 Scroll，并可观察 phase / momentum 生命周期。
-- pinch、rotate、系统 Space 三指/四指 swipe、Force Click 等无法通过公开 API 在全局后台状态下稳定获取。
-- 近期不实现完整 Trackpad Gesture 统计。
-- 不使用私有 `MultitouchSupport.framework`、私有 Multitouch API 或 IOHID hack。
+- literal `+` 映射到当前布局的 `=`；`Cmd++` / `Shift++` 不再丢失末尾加号。
+- 保留左右 Cmd/Shift/Option；generic modifier 仍是 generic，不猜左右。
+- F13+、Enter、Home/End、media keys、unknown KeyXX 等不猜键帽，保留 unsupported。
+- 非正计数忽略；不修改原始存储。旧 `keyboardHeatmapCounts(from:)` 只转接这层。
+- renderer 原有 direct-then-generic fallback 保留，不借此重新设计语义。
 
-### Product Identity / Identifier
+### KeyboardLayout / 现有 Heatmap
 
-当前 identifier 已冻结为：
+`KeyboardLayout.macStyle` 是 Foundation-only 固定布局：6 行、77 个键帽，包含 ID、label/symbol、相对宽高、spacing、箭头位置及 fallback IDs。supportedKeyIDs 从布局派生，包含可见键和 generic fallback，不是只有 77 个 ID。
 
-- 主 App：`com.xuanlprk.KeyStatsMac`
-- Helper：`com.xuanlprk.KeyStatsMac.helper`
-- XPC Mach service：`com.xuanlprk.KeyStatsMac.helper`
-- LaunchAgent label：`com.xuanlprk.KeyStatsMac.helper`
+原 AppKit renderer 从 controller 文件提取到 `KeyboardHeatmapView.swift`；全局与 per-app 共用，SwiftUI 只通过轻量 Representable 嵌入。全局 controller 的日期切换仍在原处。renderer 负责 frame、颜色、badge、tooltip；相同 per-app snapshot 不重复 apply。
 
-Debug 真机已验证 Helper 安装、LaunchAgent、XPC、Accessibility 和 Scroll Session 均正常工作。除非发现明确技术错误，不再修改这些 identifier。
+现有 Heatmap 继续采用相对 normalization：`(log(count + 1) / log(maxCount + 1))^0.82`。没有换成长久稳定 progress，也没有新增键帽或 ANSI/ISO/JIS variants。
 
-### Agent / Development Rules
+### CumulativeKeyboardSnapshot / KeyboardTrackingPeriod
 
-`AGENTS.md` 已按当前 Helper / XPC 架构和产品方向重写。核心规则包括：
+- StatsManager 的累计和 tracking-period 查询使用规范化后的全局 display history，包含未落盘 current snapshot、可用远端 shards，排除当前设备远端副本的重复统计。
+- 纯 timeline 按历史 dayKey 排序累计；权威 total 和可用 whole-event details 分开，缺失明细不补造。
+- 截止查询返回不晚于目标的最近已有 snapshot；不生成缺失日期，首次记录前为 nil。
+- First Tracked Day 是最早 keyPresses > 0 的历史日，旧数据无 per-key 明细仍算；空记录、mouse/scroll-only 不算。
+- Day N 使用 Calendar 日历日差 + 1，中间没记录仍计时间，目标早于起点为 nil；支持缺记录目标日与 DST。
+- 查询不新增存储、Timer 或 live refresh。完整 timeline 会物化多份累计字典，只看一个 cutoff 时应使用单 snapshot 查询。
 
-- AI Agent 未经用户在当前对话中明确授权，不得 commit、push、force-push、创建 PR 或 deploy。
-- 默认开发流程是：本地修改 → build / test → 查看 diff / status → 汇报 → 等待审查。
-- 不因为任务完成或测试通过自动修改 Git 或远端状态。
+### KeyboardUsageProgress
 
-## 当前阶段
+count-only 固定 soft-saturation logarithmic 曲线：
 
-**Backend Foundation / Product Exploration**
+`1 - exp(-log(2) × log1p(count / 100) / log1p(10000 / 100))`
 
-核心后端链路已经稳定可用，KeyStatsMac 已开始在成熟 upstream 基础上增加自己的数据能力。当前不急于制作新 UI，也不再为了“完善后端”无目的增加字段或抽象层。
+非正 count 为 0，10,000 为 0.5；随 count 单调增长并保留长期 headroom，与其他键、用户 max、日期和 percentile 无关。只接受物理 count，不重新解析组合键。默认锚点集中在一处，修改会改变产品尺度，需单独审查。
 
-后续数据和架构变化应由明确的产品用途驱动：先确认用户将如何理解和使用数据，再决定是否扩展模型。
+## Keyboard Atelier：隔离实验，不是正式产品
 
-## 当前数据能力
+位置：`Prototypes/KeyboardAtelier/`。独立构建脚本直接编译共享纯数据文件，不注册到主 Xcode 工程、SwiftPM 或 DMG 流程。当前脚本构建 arm64 macOS 13+，不是 universal 发布产物。
 
-以下只记录当前源码已经存在的数据能力。
+- Porcelain v1 保留 CoreGraphics 表现；v2 使用真实 SceneKit 键帽、底板和脚垫几何。
+- 最新 v2 为居中正交相机，无画面内斜转；空格键侧实际抬起约 5°，键帽、刻字随整体倾斜，统一光源。
+- 可比较已落盘真实数据、固定低/中/成熟模拟状态，以及灰白几何模式。
+- 显示日期、Day N、累计总量、每键次数和 stable progress；支持查看精确 count / 保存图片。
+- v2 按数据/灰白状态变化生成静态图并缓存；无 SCNView 持续渲染、Timer 或持续动画。此设计不等于已经完成 Instruments 性能验收。
+- 真实数据适配器直接只读本机 preference plist，不启动 StatsManager / Helper，不申请权限，不运行 Analytics 或网络。
+- 该磁盘快照不包含未落盘输入或远端 Sync cache；不能冒充正式 display aggregation。正式接入时应使用 StatsManager 的显示查询。
+- 解码失败明确显示错误，不静默用模拟数据冒充真实数据。
+- 视觉仍在迭代，没有最终验收；不替换现有 Heatmap、不接 History Replay / Live Update。
 
-### Global
+## 标识符、签名与发布边界
 
-- Key presses。
-- Canonical per-key / shortcut counts。
-- Left、right、middle、side-back、side-forward click counts。
-- Mouse movement distance。
-- Scroll distance。
-- Scroll sessions。
-- KPS / CPS 与每日峰值。
-- Daily stats、history 和 all-time aggregation。
+identifier 保持冻结：
 
-### Per-App
+| 用途 | 值 |
+| --- | --- |
+| 主 App | `com.xuanlprk.KeyStatsMac` |
+| Helper / XPC Mach service / LaunchAgent label | `com.xuanlprk.KeyStatsMac.helper` |
 
-- App identity（bundle ID / display name）。
-- Total key presses。
-- Canonical per-key counts。
-- Left、right、side-back、side-forward click counts。
-- Scroll distance。
-- Scroll sessions。
+当前 Debug 主 App / Helper 配置使用 Apple Development；Release 配置仍为 ad-hoc，发布脚本和 vendor 签名不能等同于已完成 Developer ID 发布。Helper cdhash 或签名身份变化可能影响 Accessibility 授权，禁止为了整理命名主动变更。
 
-## 当前暂缓
+发布前仍需单独确认 Developer ID、Hardened Runtime、notarization/stapling、XPC signer validation、自己的 Sparkle feed/key、Helper 升级权限连续性、Sparkle 原地升级、重装及重启/登录冷启动。旧 upstream Helper/LaunchAgent 并存或迁移策略也未作为完整发布流程验收。
 
-以下方向当前不做或暂缓；“暂缓”不代表永远放弃：
+## 测试与当前验证
 
-- 完整 Trackpad Gesture 统计。
-- 私有 Multitouch API 或 IOHID hack。
-- 多设备 Sync 协议和产品能力扩展。
-- Middle Click 记录链路优化。
-- 一次性 SwiftUI 全量迁移。
-- 大规模重构 `StatsManager`。
-- 为“现代化”重写 Helper、CGEventTap 或 XPC。
-- 正式发布签名工作。
+2026-10-12 本轮实际运行：
 
-## 发布前必须处理
+- 完整 SwiftPM：**186 个 XCTest，0 failures**。数量是本次工作区快照，不是永久保证。
+- KeyStats scheme Debug：**BUILD SUCCEEDED**，未启动 App 或安装 Helper。
+- `scripts/check_vendored_helper.sh`：实际 cdhash 与记录一致。
+- 测试覆盖真实 StatsManager、模型/兼容、归因缓存、consent、Scroll Session 状态、Profile/Breakdown presentation、Physical Mapping、Layout、累计 snapshot、Day Index 和 Progress。
+- 不覆盖真实 TCC/Accessibility、完整 XPC 运行、不同硬件媒体键、真实 Trackpad 语义、NSStatusItem 性能或最终视觉验收。
+- 本轮在临时暂存快照重跑 prototype build-only 和 geometry smoke：77 键变换后的中心命中、底部抬起/后脚接地、neutral image 与缓存复用通过；命令退出码为 0，日志有一条系统 sandbox-extension warning。2026-10-06 另有完整入画检查记录；这些都不是持续能耗测试或最终视觉验收。
+- 本轮 Debug 有 Helper Info.plist 同时出现在 Copy Bundle Resources 的 warning；未在文档整理中改工程。
+- `AGENTS.md` 仍记有旧 114 测试快照；本轮只更新 PROJECT，未顺手改它。
 
-以下事项是正式发布前的检查清单，不是当前开发重点。AI Agent 不应因为看到这些条目就自动实现：
+当前机器默认 xcode-select 指向 CommandLineTools。本轮通过 `DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer` 使用完整 Xcode 运行测试/构建，没有全局切换工具链。
 
-- Developer ID signing。
-- 主 App 和 Helper 的 Hardened Runtime 配置。
-- notarization / stapling。
-- 更严格的 XPC signer validation，例如固定 identifier + Team ID / Developer ID anchor。
-- KeyStatsMac 自己的 Sparkle feed 和 signing key。
-- Helper 升级后的 TCC / Accessibility 连续性验证。
-- Sparkle 原地升级验证。
-- macOS 重启或重新登录后的冷启动验证。
-- 明确旧 upstream Helper / LaunchAgent 是允许并存还是执行一次性清理。
+## 尚未实现 / 暂缓
 
-当前 Xcode Debug 主 App 与 Helper 使用个人 Apple Development 签名；正式 release tooling 仍需要迁移到稳定的 Developer ID 签名并重新验证 vendored Helper、升级和 TCC 连续性。Helper 的签名身份发生实质变化时，仍可能需要一次明确的权限迁移。
+- 正式累计 2.5D Keyboard 页面、最终视觉规格、History Replay 和 Live Update。
+- Keyboard Interaction Signature：仅调查过 aggregate per-key 分类；未实现 classifier，不把 printable key 命名为 Text Entry。
+- 完整后台 pinch/rotate/系统 Space swipe/pressure：独立公开 API 调研后未接入；不使用私有 Multitouch/IOHID hack。
+- Privacy Center 与 Analytics Settings 开关。
+- per-app mouseDistance、per-app middle click、固定布局外键帽/布局变体。
+- Sync 扩展、同步 secret Keychain 迁移和发布基础设施：不得因本文列出就自动实施。
+- Windows 扩展、全量 SwiftUI rewrite、无实测依据的大规模性能重构。
 
-## 下一步候选
-
-以下仅为候选探索方向，不自动构成 roadmap，也不代表已经决定优先级。
-
-### Interaction Profile
-
-利用现有 keys、per-key distribution、clicks、mouse movement、scroll distance、scroll sessions 和 per-app data，探索不同 App 的交互模式，例如 keyboard-heavy、scroll-heavy、pointer-heavy。
-
-### Performance Baseline
-
-用 Instruments 建立真实性能基线：
-
-- Idle CPU。
-- Memory。
-- Wakeups。
-- Disk writes。
-- Active typing。
-- Active scrolling。
-
-性能调整应以实测为依据，不做纯理论重构。
-
-### Data Model Evolution
-
-只有当具体产品功能需要时才继续扩展 `AppStats` / `DailyStats`。不提前创建万能事件模型、原始交互历史或无法证明用途的字段。
-
-### SwiftUI Product UI
-
-未来可逐页重做：
-
-- Keyboard Visualization。
-- Stats Popover。
-- App Stats。
-- Privacy Center。
-
-目前不是优先项，不进行一次性全量迁移，必要的 AppKit shell 可以长期保留。
+本轮已按依赖分组保存本地提交，未 push、创建 PR、deploy 或发布。下一步先审查这些提交与 Atelier 视觉，再由具体产品需求决定是否接入正式页面；后续 Git 或远端操作仍需用户明确授权。
