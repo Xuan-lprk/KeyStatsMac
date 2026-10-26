@@ -22,9 +22,9 @@ class StatsPopoverViewController: NSViewController {
     var preferredSizeDidChange: ((NSSize) -> Void)?
 
     private let updatePermissionNoticeSuppressedKey = "update.permissionNoticeSuppressed"
-    private let popoverContentWidth: CGFloat = 360
-    private let keyBreakdownGridHeight: CGFloat = 124
-    private let chartHeight: CGFloat = 140
+    private let popoverContentWidth: CGFloat = 384
+    private var keyBreakdownGridHeight: CGFloat { expandsKeys ? 106 : 32 }
+    private let chartHeight: CGFloat = 96
     
     // MARK: - UI 组件
     private var containerView: NSView!
@@ -32,8 +32,13 @@ class StatsPopoverViewController: NSViewController {
     private var statsStackView: NSStackView!
     private var keyBreakdownTitleLabel: NSTextField!
     private var keyBreakdownGridStack: NSStackView!
+    private var keyPreviewStack: NSStackView!
+    private var keyBreakdownArea: NSView!
+    private var keyBreakdownHeight: NSLayoutConstraint!
+    private var expandsKeys = false
+    private var bottomSeparator: NSBox!
+    private var keyPreviewCache: [String: KeyCountRowView] = [:]
     private var keyBreakdownColumns: [NSStackView] = []
-    private var keyBreakdownSeparators: [NSView] = []
     private var keyBreakdownRowCache: [String: KeyCountRowView] = [:]
     private var keyBreakdownDisplayedKeys: [String] = []
     private var historyTitleLabel: NSTextField!
@@ -45,7 +50,7 @@ class StatsPopoverViewController: NSViewController {
     private var settingsButton: NSButton!
     private var appStatsButton: NSButton!
     private var allTimeStatsButton: NSButton!
-    private var keyboardHeatmapButton: NSButton!
+    private var growthKeyboardEntry: GrowthKeyboardEntryView!
     private var pendingStatsRefresh = false
     private var statsUpdateToken: UUID?
     private var updateAvailabilityToken: UUID?
@@ -53,14 +58,17 @@ class StatsPopoverViewController: NSViewController {
     
     // 统计项视图
     private var keyPressView: StatItemView!
+    private var totalClickView: StatItemView!
     private var kpsBadge: KPSBadgeView!
 
     private var kpsRefreshTimer: Timer?
     private var kpsPopover: NSPopover?
     private var leftClickView: StatItemView!
     private var rightClickView: StatItemView!
+    private var middleClickView: StatItemView!
     private var sideBackClickView: StatItemView!
     private var sideForwardClickView: StatItemView!
+    private var pointerDetailsStack: NSStackView!
     private var sideClickRow: NSStackView!
     private var mouseDistanceView: StatItemView!
     private var scrollDistanceView: StatItemView!
@@ -78,11 +86,17 @@ class StatsPopoverViewController: NSViewController {
     
     override func loadView() {
         // 创建主视图
-        let mainView = AppearanceTrackingView(frame: NSRect(x: 0, y: 0, width: 360, height: 640))
+        let mainView = AppearanceTrackingView(frame: NSRect(x: 0, y: 0, width: popoverContentWidth, height: 640))
         mainView.onEffectiveAppearanceChange = { [weak self] in
             self?.updateAppearance()
         }
         mainView.wantsLayer = true
+        let material = NSVisualEffectView(frame: mainView.bounds)
+        material.material = .popover
+        material.blendingMode = .behindWindow
+        material.state = .followsWindowActiveState
+        material.autoresizingMask = [.width, .height]
+        mainView.addSubview(material)
         self.view = mainView
     }
     
@@ -125,11 +139,12 @@ class StatsPopoverViewController: NSViewController {
         stopUpdateAvailabilityUpdates()
         stopKPSRefreshTimer()
         closeKPSPopover()
+        growthKeyboardEntry.resetHover()
     }
 
     override func viewDidLayout() {
         super.viewDidLayout()
-        updatePreferredPopoverSizeIfNeeded()
+        updatePreferredPopoverSizeIfNeeded(layoutIfNeeded: false)
     }
     
     deinit {
@@ -153,8 +168,10 @@ class StatsPopoverViewController: NSViewController {
         ])
 
         // 标题
-        titleLabel = createLabel(text: "KeyStats", fontSize: 14, weight: .semibold)
+        titleLabel = createLabel(text: NSLocalizedString("appStats.range.today", comment: ""), fontSize: 11, weight: .semibold)
+        titleLabel.textColor = .secondaryLabelColor
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 18).isActive = true
         containerView.addSubview(titleLabel)
 
         // KPS 徽章（放在标题右侧，单行显示 KPS|CPS）
@@ -169,127 +186,130 @@ class StatsPopoverViewController: NSViewController {
         permissionButton.controlSize = .regular
         permissionButton.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(permissionButton)
+        let todayActions = NSStackView(views: [kpsBadge, permissionButton])
+        todayActions.spacing = 8
+        todayActions.alignment = .centerY
+        todayActions.detachesHiddenViews = true
+        todayActions.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(todayActions)
         
-        // 统计项
-        keyPressView = StatItemView(icon: "⌨️", title: NSLocalizedString("stats.keyPresses", comment: ""), value: "0")
+        // 两个主指标保持一眼可读；鼠标明细使用紧凑数据行。
+        keyPressView = StatItemView(icon: "keyboard", title: NSLocalizedString("stats.keyPresses", comment: ""), value: "0", prominent: true)
+        totalClickView = StatItemView(icon: "computermouse", title: NSLocalizedString("stats.totalClicks", comment: ""), value: "0", prominent: true)
 
-        leftClickView = StatItemView(icon: "🖱️", title: NSLocalizedString("stats.leftClicks", comment: ""), value: "0")
-        rightClickView = StatItemView(icon: "🖱️", title: NSLocalizedString("stats.rightClicks", comment: ""), value: "0")
-        sideBackClickView = StatItemView(icon: "🖱️", title: NSLocalizedString("stats.sideBackClicks", comment: ""), value: "0")
-        sideForwardClickView = StatItemView(icon: "🖱️", title: NSLocalizedString("stats.sideForwardClicks", comment: ""), value: "0")
-        mouseDistanceView = StatItemView(icon: "↔️", title: NSLocalizedString("stats.mouseDistance", comment: ""), value: "0 px")
-        scrollDistanceView = StatItemView(icon: "↕️", title: NSLocalizedString("stats.scrollDistance", comment: ""), value: "0 px")
-        
-        let clickRow = NSStackView(views: [leftClickView, rightClickView])
-        clickRow.orientation = .horizontal
-        clickRow.spacing = 16
-        clickRow.distribution = .fillEqually
-        clickRow.alignment = .centerY
-        clickRow.setContentHuggingPriority(.required, for: .vertical)
-        clickRow.setContentCompressionResistancePriority(.required, for: .vertical)
-        clickRow.translatesAutoresizingMaskIntoConstraints = false
-        clickRow.heightAnchor.constraint(equalTo: leftClickView.heightAnchor).isActive = true
-
-        sideClickRow = NSStackView(views: [sideBackClickView, sideForwardClickView])
-        sideClickRow.orientation = .horizontal
-        sideClickRow.spacing = 16
-        sideClickRow.distribution = .fillEqually
-        sideClickRow.alignment = .centerY
-        sideClickRow.setContentHuggingPriority(.required, for: .vertical)
-        sideClickRow.setContentCompressionResistancePriority(.required, for: .vertical)
-        sideClickRow.translatesAutoresizingMaskIntoConstraints = false
-        sideClickRow.heightAnchor.constraint(equalTo: sideBackClickView.heightAnchor).isActive = true
-
-        let isChinese = Locale.current.language.languageCode?.identifier == "zh"
-
-        if isChinese {
-            // 中文环境：鼠标移动和滚动距离并排显示
-            let distanceRow = NSStackView(views: [mouseDistanceView, scrollDistanceView])
-            distanceRow.orientation = .horizontal
-            distanceRow.spacing = 16
-            distanceRow.distribution = .fillEqually
-            distanceRow.alignment = .centerY
-            distanceRow.setContentHuggingPriority(.required, for: .vertical)
-            distanceRow.setContentCompressionResistancePriority(.required, for: .vertical)
-            distanceRow.translatesAutoresizingMaskIntoConstraints = false
-            distanceRow.heightAnchor.constraint(equalTo: mouseDistanceView.heightAnchor).isActive = true
-
-            statsStackView = NSStackView(views: [
-                keyPressView,
-                clickRow,
-                sideClickRow,
-                distanceRow
-            ])
-        } else {
-            // 英文环境：鼠标移动和滚动距离分行显示
-            statsStackView = NSStackView(views: [
-                keyPressView,
-                clickRow,
-                sideClickRow,
-                mouseDistanceView,
-                scrollDistanceView
-            ])
+        func pointerItem(_ shortKey: String, _ fullKey: String) -> StatItemView {
+            StatItemView(icon: "", title: NSLocalizedString(shortKey, comment: ""), value: "0", compact: true,
+                         fullTitle: NSLocalizedString(fullKey, comment: ""))
         }
+        leftClickView = pointerItem("popover.mouse.left", "stats.leftClicks")
+        rightClickView = pointerItem("popover.mouse.right", "stats.rightClicks")
+        middleClickView = pointerItem("popover.mouse.middle", "stats.middleClicks")
+        sideBackClickView = pointerItem("popover.mouse.back", "stats.sideBackClicks")
+        sideForwardClickView = pointerItem("popover.mouse.forward", "stats.sideForwardClicks")
+        mouseDistanceView = pointerItem("popover.mouse.movement", "stats.mouseDistance")
+        scrollDistanceView = pointerItem("popover.mouse.scroll", "stats.scrollDistance")
+
+        let summaryRow = NSStackView(views: [keyPressView, totalClickView])
+        summaryRow.orientation = .horizontal
+        summaryRow.spacing = 20
+        summaryRow.distribution = .fillEqually
+        summaryRow.alignment = .centerY
+        summaryRow.heightAnchor.constraint(equalTo: keyPressView.heightAnchor).isActive = true
+        summaryRow.translatesAutoresizingMaskIntoConstraints = false
+        summaryRow.widthAnchor.constraint(equalToConstant: popoverContentWidth - 36).isActive = true
+
+        statsStackView = NSStackView(views: [summaryRow])
         statsStackView.orientation = .vertical
+        statsStackView.alignment = .leading
         statsStackView.distribution = .fill
-        statsStackView.spacing = 8
+        statsStackView.spacing = 0
         statsStackView.detachesHiddenViews = true
         statsStackView.setContentHuggingPriority(.required, for: .vertical)
         statsStackView.setContentCompressionResistancePriority(.required, for: .vertical)
         statsStackView.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(statsStackView)
-        
+
+        growthKeyboardEntry = GrowthKeyboardEntryView()
+        growthKeyboardEntry.target = self
+        growthKeyboardEntry.action = #selector(showKeyboardHeatmap)
+        growthKeyboardEntry.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(growthKeyboardEntry)
+
+        func makePointerRow(_ views: [StatItemView]) -> NSStackView {
+            let row = NSStackView(views: views)
+            row.orientation = .horizontal
+            row.alignment = .centerY
+            row.distribution = .fillEqually
+            row.spacing = 12
+            row.heightAnchor.constraint(equalToConstant: 18).isActive = true
+            return row
+        }
+
+        sideClickRow = makePointerRow([sideBackClickView, sideForwardClickView])
+        pointerDetailsStack = NSStackView(views: [makePointerRow([leftClickView, middleClickView, rightClickView]),
+                                                sideClickRow, makePointerRow([mouseDistanceView, scrollDistanceView])])
+        pointerDetailsStack.orientation = .vertical
+        pointerDetailsStack.alignment = .leading
+        pointerDetailsStack.distribution = .fill
+        pointerDetailsStack.spacing = 2
+        pointerDetailsStack.detachesHiddenViews = true
+        for row in pointerDetailsStack.arrangedSubviews {
+            row.widthAnchor.constraint(equalTo: pointerDetailsStack.widthAnchor).isActive = true
+        }
+        pointerDetailsStack.setContentHuggingPriority(.required, for: .vertical)
+        pointerDetailsStack.setContentCompressionResistancePriority(.required, for: .vertical)
+        pointerDetailsStack.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(pointerDetailsStack)
+
         // 键位统计标题
-        keyBreakdownTitleLabel = createLabel(text: NSLocalizedString("section.keyBreakdown", comment: ""), fontSize: 14, weight: .semibold)
+        keyBreakdownTitleLabel = createLabel(text: NSLocalizedString("popover.topKeys", comment: ""), fontSize: 14, weight: .semibold)
         keyBreakdownTitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        let heatmapEntryTitle = isChinese ? "热力图" : "Heatmap"
-        let heatmapTooltipTitle = isChinese ? "键盘热力图" : "Keyboard Heatmap"
-        keyboardHeatmapButton = NSButton(title: heatmapEntryTitle, target: self, action: #selector(showKeyboardHeatmap))
-        keyboardHeatmapButton.bezelStyle = .rounded
-        keyboardHeatmapButton.controlSize = .small
-        keyboardHeatmapButton.font = NSFont.systemFont(ofSize: 11, weight: .regular)
-        keyboardHeatmapButton.toolTip = heatmapTooltipTitle
-        keyboardHeatmapButton.setAccessibilityLabel(heatmapTooltipTitle)
-        keyboardHeatmapButton.translatesAutoresizingMaskIntoConstraints = false
-        keyboardHeatmapButton.setContentHuggingPriority(.required, for: .horizontal)
-        keyboardHeatmapButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+        keyBreakdownTitleLabel.textColor = .labelColor
+        keyBreakdownTitleLabel.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
         containerView.addSubview(keyBreakdownTitleLabel)
-        containerView.addSubview(keyboardHeatmapButton)
 
-        // 键位统计列表（最多 3 列，每列 5 个）
+        // 五列、按行排名；少量键位也保持同一格宽。
+        keyBreakdownArea = NSView()
+        keyBreakdownArea.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(keyBreakdownArea)
+        keyPreviewStack = NSStackView()
+        keyPreviewStack.orientation = .horizontal
+        keyPreviewStack.distribution = .fillEqually
+        keyPreviewStack.spacing = 8
+        keyPreviewStack.translatesAutoresizingMaskIntoConstraints = false
+        keyBreakdownArea.addSubview(keyPreviewStack)
         keyBreakdownGridStack = NSStackView()
         keyBreakdownGridStack.orientation = .horizontal
-        keyBreakdownGridStack.spacing = 10
-        keyBreakdownGridStack.distribution = .fill
+        keyBreakdownGridStack.spacing = 8
+        keyBreakdownGridStack.distribution = .fillEqually
         keyBreakdownGridStack.alignment = .top
         keyBreakdownGridStack.translatesAutoresizingMaskIntoConstraints = false
-        containerView.addSubview(keyBreakdownGridStack)
+        keyBreakdownArea.addSubview(keyBreakdownGridStack)
+        for body in [keyPreviewStack!, keyBreakdownGridStack!] {
+            NSLayoutConstraint.activate([
+                body.topAnchor.constraint(equalTo: keyBreakdownArea.topAnchor),
+                body.leadingAnchor.constraint(equalTo: keyBreakdownArea.leadingAnchor),
+                body.trailingAnchor.constraint(equalTo: keyBreakdownArea.trailingAnchor),
+                body.heightAnchor.constraint(equalToConstant: body === keyPreviewStack ? 32 : 106)
+            ])
+        }
+        keyBreakdownHeight = keyBreakdownArea.heightAnchor.constraint(equalToConstant: keyBreakdownGridHeight)
+        keyBreakdownHeight.isActive = true
 
-        keyBreakdownColumns = (0..<3).map { index in
+        keyBreakdownColumns = (0..<5).map { _ in
             let column = NSStackView()
             column.orientation = .vertical
-            column.spacing = 6
+            column.spacing = 5
             column.alignment = .leading
             column.distribution = .fill
             column.translatesAutoresizingMaskIntoConstraints = false
             keyBreakdownGridStack.addArrangedSubview(column)
-            if index < 2 {
-                let separator = makeVerticalSeparator()
-                keyBreakdownSeparators.append(separator)
-                keyBreakdownGridStack.addArrangedSubview(separator)
-                separator.heightAnchor.constraint(equalTo: keyBreakdownGridStack.heightAnchor).isActive = true
-            }
             return column
         }
 
-        if keyBreakdownColumns.count == 3 {
-            keyBreakdownColumns[0].widthAnchor.constraint(equalTo: keyBreakdownColumns[1].widthAnchor).isActive = true
-            keyBreakdownColumns[1].widthAnchor.constraint(equalTo: keyBreakdownColumns[2].widthAnchor).isActive = true
-        }
-
         // 历史趋势标题
-        historyTitleLabel = createLabel(text: NSLocalizedString("section.history", comment: ""), fontSize: 14, weight: .semibold)
+        historyTitleLabel = createLabel(text: NSLocalizedString("section.history", comment: ""), fontSize: 12, weight: .semibold)
         historyTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(historyTitleLabel)
         
@@ -330,6 +350,22 @@ class StatsPopoverViewController: NSViewController {
         chartStyleControl.selectedSegment = 0
         chartStyleControl.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(chartStyleControl)
+        for control in [rangeControl!, metricControl!, chartStyleControl!] {
+            control.controlSize = .small
+            control.segmentStyle = .texturedRounded
+            control.font = .systemFont(ofSize: 11)
+        }
+        historyTitleLabel.heightAnchor.constraint(greaterThanOrEqualTo: rangeControl.heightAnchor).isActive = true
+        for (index, symbol) in ["chart.xyaxis.line", "chart.bar"].enumerated() {
+            let label = chartStyleControl.label(forSegment: index) ?? ""
+            chartStyleControl.setImage(NSImage(systemSymbolName: symbol, accessibilityDescription: label), forSegment: index)
+            chartStyleControl.setLabel("", forSegment: index)
+            chartStyleControl.setToolTip(label, forSegment: index)
+            chartStyleControl.setWidth(28, forSegment: index)
+        }
+        rangeControl.setAccessibilityLabel(NSLocalizedString("popover.historyRange", comment: ""))
+        metricControl.setAccessibilityLabel(NSLocalizedString("popover.historyMetric", comment: ""))
+        chartStyleControl.setAccessibilityLabel(NSLocalizedString("popover.chartStyle", comment: ""))
         
         // 图表视图
         chartView = StatsChartView()
@@ -342,15 +378,16 @@ class StatsPopoverViewController: NSViewController {
         // 汇总
         historySummaryLabel = createLabel(
             text: String(format: NSLocalizedString("history.total", comment: ""), "0"),
-            fontSize: 12,
+            fontSize: 11,
             weight: .regular
         )
         historySummaryLabel.textColor = .secondaryLabelColor
+        historySummaryLabel.alignment = .right
         historySummaryLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(historySummaryLabel)
         
         // 底部分隔线
-        let bottomSeparator = NSBox()
+        bottomSeparator = NSBox()
         bottomSeparator.boxType = .separator
         bottomSeparator.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(bottomSeparator)
@@ -370,25 +407,28 @@ class StatsPopoverViewController: NSViewController {
         // 退出按钮
         quitButton = NSButton(title: NSLocalizedString("button.quit", comment: ""), target: self, action: #selector(quitApp))
         quitButton.bezelStyle = .rounded
-        quitButton.controlSize = .regular
+        quitButton.controlSize = .small
+        quitButton.bezelStyle = .recessed
+        quitButton.showsBorderOnlyWhileMouseInside = true
+        quitButton.font = .systemFont(ofSize: 11)
+        checkUpdatesButton.controlSize = .small
+        checkUpdatesButton.bezelStyle = .recessed
+        checkUpdatesButton.showsBorderOnlyWhileMouseInside = true
+        checkUpdatesButton.font = .systemFont(ofSize: 11)
         
         buttonStack.addArrangedSubview(checkUpdatesButton)
         buttonStack.addArrangedSubview(quitButton)
 
         settingsButton = makeSymbolButton(systemName: "gearshape",
                                           fallbackTitle: NSLocalizedString("settings.title", comment: ""),
-                                          pointSize: 16,
-                                          weight: .semibold,
+                                          pointSize: 14,
+                                          weight: .regular,
                                           action: #selector(openSettings))
         settingsButton.toolTip = NSLocalizedString("settings.title", comment: "")
         settingsButton.setAccessibilityLabel(NSLocalizedString("settings.title", comment: ""))
         settingsButton.imageScaling = .scaleProportionallyDown
         settingsButton.setContentHuggingPriority(.required, for: .horizontal)
         settingsButton.setContentCompressionResistancePriority(.required, for: .horizontal)
-        if let hoverButton = settingsButton as? HoverIconButton {
-            hoverButton.padding = 4
-            hoverButton.cornerRadius = 6
-        }
         NSLayoutConstraint.activate([
             settingsButton.widthAnchor.constraint(equalToConstant: 28),
             settingsButton.heightAnchor.constraint(equalToConstant: 28)
@@ -396,18 +436,14 @@ class StatsPopoverViewController: NSViewController {
 
         appStatsButton = makeSymbolButton(systemName: "square.grid.2x2",
                                           fallbackTitle: NSLocalizedString("appStats.button", comment: ""),
-                                          pointSize: 16,
-                                          weight: .semibold,
+                                          pointSize: 14,
+                                          weight: .regular,
                                           action: #selector(showAppStats))
         appStatsButton.toolTip = NSLocalizedString("appStats.button", comment: "")
         appStatsButton.setAccessibilityLabel(NSLocalizedString("appStats.button", comment: ""))
         appStatsButton.imageScaling = .scaleProportionallyDown
         appStatsButton.setContentHuggingPriority(.required, for: .horizontal)
         appStatsButton.setContentCompressionResistancePriority(.required, for: .horizontal)
-        if let hoverButton = appStatsButton as? HoverIconButton {
-            hoverButton.padding = 4
-            hoverButton.cornerRadius = 6
-        }
         NSLayoutConstraint.activate([
             appStatsButton.widthAnchor.constraint(equalToConstant: 28),
             appStatsButton.heightAnchor.constraint(equalToConstant: 28)
@@ -415,18 +451,14 @@ class StatsPopoverViewController: NSViewController {
 
         allTimeStatsButton = makeSymbolButton(systemName: "chart.bar.xaxis",
                                               fallbackTitle: NSLocalizedString("allTimeStats.button", comment: ""),
-                                              pointSize: 16,
-                                              weight: .semibold,
+                                              pointSize: 14,
+                                              weight: .regular,
                                               action: #selector(showAllTimeStats))
         allTimeStatsButton.toolTip = NSLocalizedString("allTimeStats.button", comment: "")
         allTimeStatsButton.setAccessibilityLabel(NSLocalizedString("allTimeStats.button", comment: ""))
         allTimeStatsButton.imageScaling = .scaleProportionallyDown
         allTimeStatsButton.setContentHuggingPriority(.required, for: .horizontal)
         allTimeStatsButton.setContentCompressionResistancePriority(.required, for: .horizontal)
-        if let hoverButton = allTimeStatsButton as? HoverIconButton {
-            hoverButton.padding = 4
-            hoverButton.cornerRadius = 6
-        }
         NSLayoutConstraint.activate([
             allTimeStatsButton.widthAnchor.constraint(equalToConstant: 28),
             allTimeStatsButton.heightAnchor.constraint(equalToConstant: 28)
@@ -456,72 +488,58 @@ class StatsPopoverViewController: NSViewController {
 
         containerView.addSubview(footerStack)
         
-        // 布局约束
         NSLayoutConstraint.activate([
-            // 标题
-            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
-            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            growthKeyboardEntry.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
+            growthKeyboardEntry.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
+            growthKeyboardEntry.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
+            growthKeyboardEntry.heightAnchor.constraint(equalToConstant: 92),
 
-            kpsBadge.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            kpsBadge.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 8),
+            titleLabel.heightAnchor.constraint(greaterThanOrEqualTo: todayActions.heightAnchor),
+            titleLabel.topAnchor.constraint(equalTo: growthKeyboardEntry.bottomAnchor, constant: 12),
+            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            todayActions.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            todayActions.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+            todayActions.leadingAnchor.constraint(greaterThanOrEqualTo: titleLabel.trailingAnchor, constant: 8),
 
-            permissionButton.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            permissionButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            
-            // 统计项
-            statsStackView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            statsStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            statsStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            
-            // 键位统计
+            statsStackView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2),
+            statsStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            statsStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+
             keyBreakdownTitleLabel.topAnchor.constraint(equalTo: statsStackView.bottomAnchor, constant: 12),
-            keyBreakdownTitleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            keyBreakdownTitleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            keyBreakdownArea.topAnchor.constraint(equalTo: keyBreakdownTitleLabel.bottomAnchor, constant: 8),
+            keyBreakdownArea.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            keyBreakdownArea.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
 
-            keyboardHeatmapButton.centerYAnchor.constraint(equalTo: keyBreakdownTitleLabel.centerYAnchor),
-            keyboardHeatmapButton.leadingAnchor.constraint(greaterThanOrEqualTo: keyBreakdownTitleLabel.trailingAnchor, constant: 8),
-            keyboardHeatmapButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            historyTitleLabel.topAnchor.constraint(equalTo: keyBreakdownArea.bottomAnchor, constant: 14),
+            historyTitleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            rangeControl.centerYAnchor.constraint(equalTo: historyTitleLabel.centerYAnchor),
+            rangeControl.leadingAnchor.constraint(greaterThanOrEqualTo: historyTitleLabel.trailingAnchor, constant: 8),
+            rangeControl.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+            metricControl.topAnchor.constraint(equalTo: historyTitleLabel.bottomAnchor, constant: 6),
+            metricControl.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            metricControl.trailingAnchor.constraint(equalTo: chartStyleControl.leadingAnchor, constant: -8),
+            chartStyleControl.centerYAnchor.constraint(equalTo: metricControl.centerYAnchor),
+            chartStyleControl.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+            chartView.topAnchor.constraint(equalTo: metricControl.bottomAnchor, constant: 6),
+            chartView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            chartView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+            chartView.heightAnchor.constraint(equalToConstant: chartHeight),
+            historySummaryLabel.topAnchor.constraint(equalTo: chartView.bottomAnchor, constant: 2),
+            historySummaryLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+            historySummaryLabel.leadingAnchor.constraint(greaterThanOrEqualTo: containerView.leadingAnchor, constant: 18),
 
-            keyBreakdownGridStack.topAnchor.constraint(equalTo: keyBreakdownTitleLabel.bottomAnchor, constant: 8),
-            keyBreakdownGridStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            keyBreakdownGridStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            keyBreakdownGridStack.heightAnchor.constraint(equalToConstant: 124),
-
-            // 历史趋势
-            historyTitleLabel.topAnchor.constraint(equalTo: keyBreakdownGridStack.bottomAnchor, constant: 16),
-            historyTitleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            
-            rangeControl.topAnchor.constraint(equalTo: historyTitleLabel.bottomAnchor, constant: 8),
-            rangeControl.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            rangeControl.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            
-            metricControl.topAnchor.constraint(equalTo: rangeControl.bottomAnchor, constant: 8),
-            metricControl.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            metricControl.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            
-            chartStyleControl.topAnchor.constraint(equalTo: metricControl.bottomAnchor, constant: 8),
-            chartStyleControl.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            chartStyleControl.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            
-            chartView.topAnchor.constraint(equalTo: chartStyleControl.bottomAnchor, constant: 8),
-            chartView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            chartView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            chartView.heightAnchor.constraint(equalToConstant: 140),
-            
-            historySummaryLabel.topAnchor.constraint(equalTo: chartView.bottomAnchor, constant: 6),
-            historySummaryLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            
-            // 底部分隔线
-            bottomSeparator.topAnchor.constraint(equalTo: historySummaryLabel.bottomAnchor, constant: 16),
-            bottomSeparator.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            bottomSeparator.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            
-            // 按钮
+            pointerDetailsStack.topAnchor.constraint(equalTo: historySummaryLabel.bottomAnchor, constant: 10),
+            pointerDetailsStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            pointerDetailsStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
+            bottomSeparator.topAnchor.constraint(equalTo: pointerDetailsStack.bottomAnchor, constant: 12),
+            bottomSeparator.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            bottomSeparator.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
             footerStack.topAnchor.constraint(equalTo: bottomSeparator.bottomAnchor, constant: 6),
-            footerStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            footerStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            footerStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            footerStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
             footerStack.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -10)
         ])
-
     }
     
     private func createLabel(text: String, fontSize: CGFloat, weight: NSFont.Weight) -> NSTextField {
@@ -532,18 +550,6 @@ class StatsPopoverViewController: NSViewController {
         label.isBezeled = false
         label.drawsBackground = false
         return label
-    }
-
-    private func makeVerticalSeparator() -> NSView {
-        let view = NSView()
-        view.wantsLayer = true
-        // 在 Dark Mode 下使用更高的透明度以提高可见性
-        let isDarkMode = self.view.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        let alpha: CGFloat = isDarkMode ? 0.35 : 0.15
-        view.layer?.backgroundColor = resolvedCGColor(NSColor.separatorColor, alpha: alpha, for: self.view)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.widthAnchor.constraint(equalToConstant: 1).isActive = true
-        return view
     }
 
     private func makeSymbolButton(systemName: String,
@@ -558,8 +564,10 @@ class StatsPopoverViewController: NSViewController {
         }
 
         if let image = image {
-            let button = HoverIconButton(image: image, target: self, action: action)
-            button.isBordered = false
+            let button = NSButton(image: image, target: self, action: action)
+            button.bezelStyle = .recessed
+            button.showsBorderOnlyWhileMouseInside = true
+            button.controlSize = .small
             button.imagePosition = .imageOnly
             button.contentTintColor = .labelColor
             button.translatesAutoresizingMaskIntoConstraints = false
@@ -567,7 +575,9 @@ class StatsPopoverViewController: NSViewController {
         }
 
         let button = NSButton(title: fallbackTitle, target: self, action: action)
-        button.bezelStyle = .rounded
+        button.bezelStyle = .recessed
+        button.showsBorderOnlyWhileMouseInside = true
+        button.controlSize = .small
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }
@@ -579,9 +589,11 @@ class StatsPopoverViewController: NSViewController {
         let hasSideClickData = (stats.sideBackClicks + stats.sideForwardClicks) > 0
         
         keyPressView.updateValue(formatNumber(stats.keyPresses))
+        totalClickView.updateValue(formatNumber(stats.totalClicks))
         updateKPSBadge()
         leftClickView.updateValue(formatNumber(stats.leftClicks))
         rightClickView.updateValue(formatNumber(stats.rightClicks))
+        middleClickView.updateValue(formatNumber(stats.middleClicks))
         sideBackClickView.updateValue(formatNumber(stats.sideBackClicks))
         sideForwardClickView.updateValue(formatNumber(stats.sideForwardClicks))
         applySideClickRowVisibility(hasSideClickData)
@@ -682,8 +694,11 @@ class StatsPopoverViewController: NSViewController {
     }
 
     private func applyUpdateButtonState(_ state: UpdateButtonState) {
-        checkUpdatesButton.isHidden = state.isHidden
-        checkUpdatesButton.isEnabled = state.isEnabled
+        let manualReleases = UpdateManager.shared.usesManualReleasePage
+        checkUpdatesButton.title = NSLocalizedString(manualReleases ? "button.viewReleases" : "button.checkUpdates", comment: "")
+        checkUpdatesButton.toolTip = manualReleases ? NSLocalizedString("update.manualReleases.help", comment: "") : nil
+        checkUpdatesButton.isHidden = manualReleases ? false : state.isHidden
+        checkUpdatesButton.isEnabled = manualReleases ? AppLaunchMode.current == .normal : state.isEnabled
         updatePreferredPopoverSizeIfNeeded()
     }
 
@@ -711,22 +726,34 @@ class StatsPopoverViewController: NSViewController {
     private func updateKeyBreakdown() {
         let items = StatsManager.shared.keyPressBreakdownSorted()
         let hasItems = !items.isEmpty
-        keyBreakdownSeparators.forEach { $0.isHidden = !hasItems }
-        guard hasItems else {
-            keyBreakdownDisplayedKeys = []
-            for column in keyBreakdownColumns {
-                column.arrangedSubviews.forEach {
-                    column.removeArrangedSubview($0)
-                    $0.removeFromSuperview()
-                }
+        expandsKeys = items.count > 5
+        keyPreviewStack.isHidden = expandsKeys
+        keyBreakdownGridStack.isHidden = !expandsKeys
+        keyBreakdownHeight.constant = keyBreakdownGridHeight
+        if !expandsKeys {
+            let top = Array(items.prefix(5))
+            let keys = top.map { $0.key }
+            if keys == keyBreakdownDisplayedKeys && !keyPreviewStack.arrangedSubviews.isEmpty {
+                for item in top { keyPreviewCache[item.key]?.update(key: item.key, count: formatNumber(item.count)) }
+                return
             }
-            let emptyLabel = createLabel(text: NSLocalizedString("keyBreakdown.empty", comment: ""), fontSize: 12, weight: .regular)
-            emptyLabel.textColor = .secondaryLabelColor
-            emptyLabel.translatesAutoresizingMaskIntoConstraints = false
-            if let firstColumn = keyBreakdownColumns.first {
-                firstColumn.addArrangedSubview(emptyLabel)
-                emptyLabel.widthAnchor.constraint(equalTo: firstColumn.widthAnchor).isActive = true
+            keyPreviewStack.arrangedSubviews.forEach { keyPreviewStack.removeArrangedSubview($0); $0.removeFromSuperview() }
+            keyPreviewCache = keyPreviewCache.filter { keys.contains($0.key) }
+            for item in top {
+                let tile = keyPreviewCache[item.key] ?? KeyCountRowView(key: item.key, count: formatNumber(item.count), vertical: true)
+                keyPreviewCache[item.key] = tile
+                tile.update(key: item.key, count: formatNumber(item.count))
+                keyPreviewStack.addArrangedSubview(tile)
             }
+            if !hasItems {
+                let empty = createLabel(text: NSLocalizedString("keyBreakdown.empty", comment: ""), fontSize: 12, weight: .regular)
+                empty.textColor = .secondaryLabelColor
+                keyPreviewStack.addArrangedSubview(empty)
+            }
+            if hasItems {
+                for _ in top.count..<5 { keyPreviewStack.addArrangedSubview(NSView()) }
+            }
+            keyBreakdownDisplayedKeys = keys
             return
         }
         let limitedItems = Array(items.prefix(15))
@@ -746,10 +773,10 @@ class StatsPopoverViewController: NSViewController {
             }
         }
         for (index, item) in limitedItems.enumerated() {
-            let columnIndex = index / 5
+            let columnIndex = index % 5
             if columnIndex >= keyBreakdownColumns.count { break }
             let row = keyBreakdownRowCache[item.key] ?? {
-                let row = KeyCountRowView(key: item.key, count: formatNumber(item.count))
+                let row = KeyCountRowView(key: item.key, count: formatNumber(item.count), vertical: true)
                 keyBreakdownRowCache[item.key] = row
                 return row
             }()
@@ -808,6 +835,8 @@ class StatsPopoverViewController: NSViewController {
     private func focusPrimaryControl() {
         if !permissionButton.isHidden {
             view.window?.makeFirstResponder(permissionButton)
+        } else {
+            view.window?.makeFirstResponder(growthKeyboardEntry)
         }
     }
     
@@ -834,17 +863,9 @@ class StatsPopoverViewController: NSViewController {
 
     private func updateAppearance() {
         updateKeyBreakdown()
-        updateKeyBreakdownSeparatorColors()
         chartView.needsDisplay = true
     }
 
-    private func updateKeyBreakdownSeparatorColors() {
-        let isDarkMode = view.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        let alpha: CGFloat = isDarkMode ? 0.35 : 0.15
-        let separatorColor = resolvedCGColor(NSColor.separatorColor, alpha: alpha, for: view)
-        keyBreakdownSeparators.forEach { $0.layer?.backgroundColor = separatorColor }
-    }
-    
     private func selectedRange() -> StatsManager.HistoryRange {
         switch rangeControl.selectedSegment {
         case 0: return .week
@@ -943,23 +964,12 @@ class StatsPopoverViewController: NSViewController {
     }
 
     private func applySideClickRowVisibility(_ shouldShow: Bool) {
-        let hasRow = statsStackView.arrangedSubviews.contains(sideClickRow)
-        if shouldShow {
-            guard !hasRow else { return }
-            let insertIndex = min(2, statsStackView.arrangedSubviews.count)
-            statsStackView.insertArrangedSubview(sideClickRow, at: insertIndex)
-            sideClickRow.isHidden = false
-            return
-        }
-
-        guard hasRow else { return }
-        statsStackView.removeArrangedSubview(sideClickRow)
-        sideClickRow.removeFromSuperview()
+        sideClickRow.isHidden = !shouldShow
     }
 
-    private func updatePreferredPopoverSizeIfNeeded() {
+    private func updatePreferredPopoverSizeIfNeeded(layoutIfNeeded: Bool = true) {
         guard isViewLoaded else { return }
-        view.layoutSubtreeIfNeeded()
+        if layoutIfNeeded { view.layoutSubtreeIfNeeded() }
 
         let statsRows = statsStackView.arrangedSubviews
         let statsRowsHeight = statsRows.reduce(CGFloat.zero) { partialResult, row in
@@ -981,27 +991,17 @@ class StatsPopoverViewController: NSViewController {
             checkUpdatesButton.isHidden ? 0 : checkUpdatesButton.fittingSize.height
         )
 
-        let keyBreakdownHeaderHeight = max(keyBreakdownTitleLabel.fittingSize.height, keyboardHeatmapButton.fittingSize.height)
+        let keyBreakdownHeaderHeight = keyBreakdownTitleLabel.fittingSize.height
 
         let computedHeight =
-            16 + titleRowHeight +
-            8 + // title -> stats stack
-            statsRowsHeight + statsSpacing +
-            12 + // stats stack -> key breakdown title
-            keyBreakdownHeaderHeight +
-            8 + // key breakdown title -> grid
-            keyBreakdownGridHeight +
-            16 + // grid -> history title
-            historyTitleLabel.fittingSize.height +
-            8 + rangeControl.fittingSize.height +
-            8 + metricControl.fittingSize.height +
-            8 + chartStyleControl.fittingSize.height +
-            8 + chartHeight +
-            6 + historySummaryLabel.fittingSize.height +
-            16 + // summary -> bottom separator
-            6 + // bottom separator -> footer
-            footerHeight +
-            10   // footer -> container bottom
+            8 + 92 + 12 + titleRowHeight +
+            2 + statsRowsHeight + statsSpacing +
+            12 + keyBreakdownHeaderHeight + 8 + keyBreakdownGridHeight +
+            14 + historyTitleLabel.fittingSize.height +
+            6 + metricControl.fittingSize.height +
+            6 + chartHeight + 2 + historySummaryLabel.fittingSize.height +
+            10 + pointerDetailsStack.fittingSize.height +
+            12 + bottomSeparator.fittingSize.height + 6 + footerHeight + 10
 
         let targetSize = NSSize(width: popoverContentWidth, height: ceil(computedHeight))
         guard preferredContentSize != targetSize else { return }
@@ -1022,24 +1022,28 @@ final class AnimatedStatValueViewModel: ObservableObject {
 
 struct AnimatedStatValueView: View {
     @ObservedObject var viewModel: AnimatedStatValueViewModel
+    var prominent = false
+    var compact = false
+
+    private var fontSize: CGFloat { compact ? 11 : (prominent ? 30 : 17) }
 
     var body: some View {
         Group {
             if #available(macOS 14.0, *) {
                 Text(viewModel.text)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: fontSize, weight: (compact || prominent) ? .medium : .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(Color(nsColor: .systemBlue))
+                    .foregroundStyle(.primary)
                     .contentTransition(.numericText())
             } else {
                 Text(viewModel.text)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: fontSize, weight: (compact || prominent) ? .medium : .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(Color(nsColor: .systemBlue))
+                    .foregroundStyle(.primary)
             }
         }
         .lineLimit(1)
-        .minimumScaleFactor(0.85)
+        .minimumScaleFactor(compact ? 1 : (prominent ? 0.65 : 0.85))
         .animation(.default, value: viewModel.text)
     }
 }
@@ -1059,39 +1063,181 @@ struct AnimatedKeyCountView: View {
         Group {
             if #available(macOS 14.0, *) {
                 Text(viewModel.text)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .medium))
                     .monospacedDigit()
-                    .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+                    .foregroundStyle(Color(nsColor: .labelColor))
                     .contentTransition(.numericText())
             } else {
                 Text(viewModel.text)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .medium))
                     .monospacedDigit()
-                    .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+                    .foregroundStyle(Color(nsColor: .labelColor))
             }
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
         .animation(.default, value: viewModel.text)
+    }
+}
+
+// MARK: - 静态 3D 成长键盘入口
+
+final class GrowthKeyboardEntryView: NSButton {
+    private let previewImageView = NSImageView()
+    private let chevronView = NSImageView()
+    private let ctaLabel = NSTextField(labelWithString: NSLocalizedString("popover.growthKeyboardCTA", comment: ""))
+    private var trackingAreaForHover: NSTrackingArea?
+    private var accessibilityObserver: NSObjectProtocol?
+    private var isHovered = false
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        title = ""
+        isBordered = false
+        refusesFirstResponder = false
+        focusRingType = .exterior
+        wantsLayer = true
+        layer?.cornerRadius = 10
+        layer?.masksToBounds = true
+        toolTip = NSLocalizedString("keyboardVisualization.title", comment: "")
+        setAccessibilityLabel(NSLocalizedString("popover.growthKeyboard", comment: ""))
+        setAccessibilityHelp(NSLocalizedString("popover.growthKeyboardHint", comment: ""))
+
+        previewImageView.image = NSImage(named: "GrowthKeyboardPopover")
+        previewImageView.imageScaling = .scaleProportionallyUpOrDown
+        previewImageView.wantsLayer = true
+        previewImageView.translatesAutoresizingMaskIntoConstraints = false
+        previewImageView.setAccessibilityElement(false)
+        addSubview(previewImageView)
+
+        let titleLabel = NSTextField(labelWithString: NSLocalizedString("popover.growthKeyboard", comment: ""))
+        titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+        titleLabel.textColor = .labelColor
+        let subtitleLabel = NSTextField(labelWithString: NSLocalizedString("popover.growthKeyboardSubtitle", comment: ""))
+        subtitleLabel.font = .systemFont(ofSize: 10.5, weight: .regular)
+        subtitleLabel.textColor = .secondaryLabelColor
+        ctaLabel.font = .systemFont(ofSize: 11, weight: .medium)
+        chevronView.image = NSImage(systemSymbolName: "arrow.right", accessibilityDescription: nil)
+        chevronView.symbolConfiguration = .init(pointSize: 11, weight: .medium)
+        chevronView.wantsLayer = true
+        chevronView.setAccessibilityElement(false)
+        let cta = NSStackView(views: [ctaLabel, chevronView])
+        cta.spacing = 4
+        cta.alignment = .centerY
+        let labels = NSStackView(views: [titleLabel, subtitleLabel, cta])
+        labels.orientation = .vertical
+        labels.alignment = .leading
+        labels.spacing = 4
+        labels.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(labels)
+        for label in [titleLabel, subtitleLabel, ctaLabel] {
+            label.setAccessibilityElement(false)
+        }
+        NSLayoutConstraint.activate([
+            previewImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            previewImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            previewImageView.topAnchor.constraint(equalTo: topAnchor),
+            previewImageView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            labels.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
+            labels.centerYAnchor.constraint(equalTo: centerYAnchor),
+            labels.widthAnchor.constraint(lessThanOrEqualToConstant: 144),
+            chevronView.widthAnchor.constraint(equalToConstant: 12),
+            chevronView.heightAnchor.constraint(equalToConstant: 14)
+        ])
+        accessibilityObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.updateHoverPresentation() }
+        updateHoverPresentation()
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    deinit {
+        if let accessibilityObserver { NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver) }
+    }
+    override var acceptsFirstResponder: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        super.hitTest(point) == nil ? nil : self
+    }
+    override var focusRingMaskBounds: NSRect { bounds }
+    override func drawFocusRingMask() {
+        NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10).fill()
+    }
+    override func keyDown(with event: NSEvent) {
+        if isEnabled && [36, 49, 76].contains(event.keyCode) { performClick(nil) }
+        else { super.keyDown(with: event) }
+    }
+    override func updateTrackingAreas() {
+        if let trackingAreaForHover { removeTrackingArea(trackingAreaForHover) }
+        trackingAreaForHover = NSTrackingArea(rect: bounds,
+            options: [.activeInKeyWindow, .mouseEnteredAndExited, .inVisibleRect], owner: self, userInfo: nil)
+        addTrackingArea(trackingAreaForHover!)
+        super.updateTrackingAreas()
+    }
+    override func mouseEntered(with event: NSEvent) {
+        isHovered = true
+        updateHoverPresentation()
+    }
+    override func mouseExited(with event: NSEvent) { resetHover() }
+    func resetHover() {
+        isHovered = false
+        updateHoverPresentation()
+    }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil { resetHover() }
+    }
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        updateHoverPresentation()
+    }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
+    private func updateHoverPresentation() {
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let color = isHovered ? NSColor.controlAccentColor : NSColor.controlAccentColor.withAlphaComponent(0.8)
+        ctaLabel.textColor = color
+        chevronView.contentTintColor = color
+        let moves = isHovered && !reduceMotion
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        previewImageView.layer?.removeAnimation(forKey: "entryHover")
+        chevronView.layer?.removeAnimation(forKey: "entryHover")
+        for (view, transform) in [(previewImageView, CATransform3DMakeTranslation(0, moves ? 2 : 0, 0)),
+                                  (chevronView, CATransform3DMakeTranslation(moves ? 2 : 0, 0, 0))] {
+            if moves {
+                let animation = CABasicAnimation(keyPath: "transform")
+                animation.fromValue = NSValue(caTransform3D: view.layer?.presentation()?.transform ?? view.layer?.transform ?? CATransform3DIdentity)
+                animation.toValue = NSValue(caTransform3D: transform)
+                animation.duration = 0.14
+                animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                view.layer?.add(animation, forKey: "entryHover")
+            }
+            view.layer?.transform = transform
+        }
+        CATransaction.commit()
     }
 }
 
 // MARK: - 统计项视图
 
 class StatItemView: NSView {
-    private var iconLabel: NSTextField!
+    private var iconView: NSImageView!
     private var titleLabel: NSTextField!
     private var valueViewModel: AnimatedStatValueViewModel!
     private var valueHostingView: NSHostingView<AnimatedStatValueView>!
     
-    init(icon: String, title: String, value: String) {
+    init(icon: String, title: String, value: String, prominent: Bool = false, compact: Bool = false, fullTitle: String? = nil) {
         super.init(frame: .zero)
-        setupUI(icon: icon, title: title, value: value)
+        setupUI(icon: icon, title: title, value: value, prominent: prominent, compact: compact)
+        toolTip = fullTitle ?? title
+        titleLabel.toolTip = fullTitle ?? title
+        titleLabel.setAccessibilityLabel(fullTitle ?? title)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func setupUI(icon: String, title: String, value: String) {
+    private func setupUI(icon: String, title: String, value: String, prominent: Bool, compact: Bool) {
         translatesAutoresizingMaskIntoConstraints = false
         setContentHuggingPriority(.defaultLow, for: .horizontal)
         setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -1099,15 +1245,19 @@ class StatItemView: NSView {
         setContentCompressionResistancePriority(.required, for: .vertical)
         
         // 图标
-        iconLabel = NSTextField(labelWithString: icon)
-        iconLabel.font = NSFont.systemFont(ofSize: 20)
-        iconLabel.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(iconLabel)
+        iconView = NSImageView()
+        iconView.image = NSImage(systemSymbolName: icon, accessibilityDescription: nil)
+        iconView.symbolConfiguration = .init(pointSize: 12, weight: .medium)
+        iconView.contentTintColor = .secondaryLabelColor
+        iconView.setAccessibilityElement(false)
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(iconView)
         
         // 标题
         titleLabel = NSTextField(labelWithString: title)
-        titleLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
-        titleLabel.textColor = .labelColor
+        titleLabel.font = NSFont.systemFont(ofSize: 11, weight: .regular)
+        titleLabel.textColor = .secondaryLabelColor
+        titleLabel.toolTip = title
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -1115,26 +1265,55 @@ class StatItemView: NSView {
         
         // 数值（SwiftUI 动画）
         valueViewModel = AnimatedStatValueViewModel(text: value)
-        valueHostingView = NSHostingView(rootView: AnimatedStatValueView(viewModel: valueViewModel))
+        valueHostingView = NSHostingView(rootView: AnimatedStatValueView(viewModel: valueViewModel, prominent: prominent, compact: compact))
         valueHostingView.translatesAutoresizingMaskIntoConstraints = false
         valueHostingView.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
         valueHostingView.setContentHuggingPriority(.required, for: .horizontal)
         addSubview(valueHostingView)
-        
-        // 布局
+
+        if compact {
+            iconView.isHidden = true
+            titleLabel.lineBreakMode = .byClipping
+            titleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+            titleLabel.setContentHuggingPriority(.required, for: .horizontal)
+            NSLayoutConstraint.activate([
+                heightAnchor.constraint(equalToConstant: 18),
+                titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
+                titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+                valueHostingView.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 5),
+                valueHostingView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+                valueHostingView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            ])
+            return
+        }
+
+        if prominent {
+            iconView.isHidden = true
+            NSLayoutConstraint.activate([
+                heightAnchor.constraint(equalToConstant: 48),
+                valueHostingView.topAnchor.constraint(equalTo: topAnchor),
+                valueHostingView.leadingAnchor.constraint(equalTo: leadingAnchor),
+                valueHostingView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+                titleLabel.topAnchor.constraint(equalTo: valueHostingView.bottomAnchor, constant: 0),
+                titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
+                titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor)
+            ])
+            return
+        }
+
         NSLayoutConstraint.activate([
-            iconLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            iconLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            iconLabel.topAnchor.constraint(equalTo: topAnchor, constant: 4),
-            iconLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
-            iconLabel.widthAnchor.constraint(equalToConstant: 24),
-            
-            titleLabel.leadingAnchor.constraint(equalTo: iconLabel.trailingAnchor, constant: 4),
-            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            
-            valueHostingView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            valueHostingView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            valueHostingView.leadingAnchor.constraint(greaterThanOrEqualTo: titleLabel.trailingAnchor, constant: 8)
+            heightAnchor.constraint(equalToConstant: prominent ? 54 : 38),
+            iconView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            iconView.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            iconView.widthAnchor.constraint(equalToConstant: 16),
+            iconView.heightAnchor.constraint(equalToConstant: 14),
+            titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 5),
+            titleLabel.topAnchor.constraint(equalTo: topAnchor),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+            valueHostingView.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            valueHostingView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2),
+            valueHostingView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+            valueHostingView.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor)
         ])
     }
     
@@ -1183,27 +1362,37 @@ class KeyCountRowView: NSView {
         "Down": "arrow.down"
     ]
     private static let squareSymbolKeys: Set<String> = ["Ctrl", "Control"]
+    private static let mediaSymbols: [String: String] = [
+        "BrightnessDown": "sun.min", "BrightnessUp": "sun.max",
+        "VolumeDown": "speaker.wave.1.fill", "VolumeUp": "speaker.wave.3.fill",
+        "Mute": "speaker.slash.fill", "PlayPause": "playpause.fill",
+        "NextTrack": "forward.end.fill", "PreviousTrack": "backward.end.fill",
+        "FastForward": "forward.fill", "Rewind": "backward.fill",
+        "KeyboardBrightnessDown": "light.min", "KeyboardBrightnessUp": "light.max",
+        "KeyboardBacklightToggle": "lightbulb"
+    ]
 
-    init(key: String, count: String) {
+    init(key: String, count: String, vertical: Bool = false) {
         self.currentKey = key
         super.init(frame: .zero)
-        setupUI(key: key, count: count)
+        setupUI(key: key, count: count, vertical: vertical)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private func setupUI(key: String, count: String) {
+    private func setupUI(key: String, count: String, vertical: Bool) {
         translatesAutoresizingMaskIntoConstraints = false
-        let keyFont = NSFont.systemFont(ofSize: 12, weight: .medium)
-        keyLabel = NSTextField(labelWithAttributedString: Self.attributedKeyLabel(for: key, font: keyFont, appearance: effectiveAppearance))
+        let keyFont = NSFont.systemFont(ofSize: vertical ? 10 : 12, weight: .medium)
+        keyLabel = NSTextField(labelWithAttributedString: Self.attributedKeyLabel(for: key, font: keyFont, appearance: effectiveAppearance, compact: true))
         keyLabel.font = keyFont
         keyLabel.textColor = .labelColor
         keyLabel.lineBreakMode = .byTruncatingTail
         keyLabel.maximumNumberOfLines = 1
         keyLabel.cell?.truncatesLastVisibleLine = true
         keyLabel.toolTip = key
+        keyLabel.setAccessibilityValue(key)
         keyLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(keyLabel)
 
@@ -1211,6 +1400,19 @@ class KeyCountRowView: NSView {
         countHostingView = NSHostingView(rootView: AnimatedKeyCountView(viewModel: countViewModel))
         countHostingView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(countHostingView)
+
+        if vertical {
+            NSLayoutConstraint.activate([
+                heightAnchor.constraint(equalToConstant: 32),
+                keyLabel.topAnchor.constraint(equalTo: topAnchor),
+                keyLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+                keyLabel.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor),
+                countHostingView.centerXAnchor.constraint(equalTo: centerXAnchor),
+                countHostingView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor),
+                countHostingView.bottomAnchor.constraint(equalTo: bottomAnchor)
+            ])
+            return
+        }
 
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: 20),
@@ -1258,13 +1460,14 @@ class KeyCountRowView: NSView {
 
     private func applyKeyLabel() {
         if let font = keyLabel.font {
-            keyLabel.attributedStringValue = Self.attributedKeyLabel(for: currentKey, font: font, appearance: effectiveAppearance)
+            keyLabel.attributedStringValue = Self.attributedKeyLabel(for: currentKey, font: font, appearance: effectiveAppearance, compact: true)
         } else {
             keyLabel.stringValue = currentKey
         }
+        keyLabel.setAccessibilityValue(currentKey)
     }
 
-    static func attributedKeyLabel(for key: String, font: NSFont, appearance: NSAppearance? = nil) -> NSAttributedString {
+    static func attributedKeyLabel(for key: String, font: NSFont, appearance: NSAppearance? = nil, compact: Bool = false) -> NSAttributedString {
         let currentAppearance = appearance ?? NSApp.effectiveAppearance
         let textAttributes: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -1276,7 +1479,7 @@ class KeyCountRowView: NSView {
             if index > 0 {
                 result.append(NSAttributedString(string: "\u{200A}", attributes: textAttributes))
             }
-            if let badge = makeKeyBadge(for: part, font: font, appearance: currentAppearance) {
+            if let badge = makeKeyBadge(for: part, font: font, appearance: currentAppearance, compact: compact) {
                 let attachment = NSTextAttachment()
                 attachment.image = badge
                 let baselineOffset = (font.ascender + font.descender - badge.size.height) / 2 + 1
@@ -1290,9 +1493,9 @@ class KeyCountRowView: NSView {
         return result
     }
 
-    private static func makeKeyBadge(for keyPart: String, font: NSFont, appearance: NSAppearance) -> NSImage? {
+    private static func makeKeyBadge(for keyPart: String, font: NSFont, appearance: NSAppearance, compact: Bool) -> NSImage? {
         let contentPointSize = max(font.pointSize - 1, 10)
-        let padding: CGFloat = 4
+        let padding: CGFloat = compact && font.pointSize <= 10 ? 1.5 : 4
         let lineWidth: CGFloat = 0.8
         let cornerRadiusScale: CGFloat = 0.3
         let textFont = NSFont.systemFont(ofSize: contentPointSize, weight: .medium)
@@ -1303,7 +1506,7 @@ class KeyCountRowView: NSView {
         let textMetricsHeight = ("M" as NSString).size(withAttributes: textAttributes).height
         let badgeHeight = ceil(max(textMetricsHeight, contentPointSize) + padding * 2)
 
-        if let symbolName = Self.symbolNameMap[keyPart],
+        if let symbolName = Self.symbolNameMap[keyPart] ?? (compact ? Self.mediaSymbols[keyPart] : nil),
            let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: keyPart)?
             .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: contentPointSize, weight: .medium)) {
             let symbolSize = symbol.size
@@ -1324,7 +1527,7 @@ class KeyCountRowView: NSView {
                 badgeWidth = ceil(max(badgeHeight, symbolWidth + padding * 2))
             }
             let badgeSize = NSSize(width: badgeWidth, height: badgeHeight)
-            return drawBadge(size: badgeSize, cornerRadius: badgeHeight * cornerRadiusScale, lineWidth: lineWidth, appearance: appearance) { rect in
+            return drawBadge(size: badgeSize, cornerRadius: badgeHeight * cornerRadiusScale, lineWidth: lineWidth, appearance: appearance, compact: compact) { rect in
                 let symbolRect = NSRect(
                     x: rect.midX - symbolRectSize.width / 2,
                     y: rect.midY - symbolRectSize.height / 2,
@@ -1345,7 +1548,7 @@ class KeyCountRowView: NSView {
         let contentHeight = max(contentPointSize, textSize.height)
         let badgeWidth = ceil(max(badgeHeight, textSize.width + padding * 2))
         let badgeSize = NSSize(width: badgeWidth, height: badgeHeight)
-        return drawBadge(size: badgeSize, cornerRadius: badgeHeight * cornerRadiusScale, lineWidth: lineWidth, appearance: appearance) { rect in
+        return drawBadge(size: badgeSize, cornerRadius: badgeHeight * cornerRadiusScale, lineWidth: lineWidth, appearance: appearance, compact: compact) { rect in
             let textRect = NSRect(
                 x: rect.midX - textSize.width / 2,
                 y: rect.midY - textSize.height / 2,
@@ -1356,7 +1559,7 @@ class KeyCountRowView: NSView {
         }
     }
 
-    private static func drawBadge(size: NSSize, cornerRadius: CGFloat, lineWidth: CGFloat, appearance: NSAppearance, content: (NSRect) -> Void) -> NSImage {
+    private static func drawBadge(size: NSSize, cornerRadius: CGFloat, lineWidth: CGFloat, appearance: NSAppearance, compact: Bool, content: (NSRect) -> Void) -> NSImage {
         let image = NSImage(size: size)
         image.lockFocus()
         appearance.performAsCurrentDrawingAppearance {
@@ -1373,12 +1576,14 @@ class KeyCountRowView: NSView {
             path.lineJoinStyle = .round
             path.lineCapStyle = .round
 
-            // 使用动态透明度以支持 Dark Mode
-            let isDarkMode = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            let fillAlpha: CGFloat = isDarkMode ? 0.6 : 0.6
-
-            NSColor.separatorColor.withAlphaComponent(fillAlpha).setFill()
-            path.fill()
+            if compact {
+                let isDarkMode = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                NSColor.labelColor.withAlphaComponent(isDarkMode ? 0.09 : 0.035).setFill()
+                path.fill()
+            } else {
+                NSColor.separatorColor.withAlphaComponent(0.6).setFill()
+                path.fill()
+            }
 
             content(rect)
         }
@@ -1567,15 +1772,12 @@ class StatsChartView: NSView {
 
         // 在 Dark Mode 下使用更高的透明度以提高可见性
         let isDarkMode = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        let gridAlpha: CGFloat = isDarkMode ? 0.5 : 0.35
+        let gridAlpha: CGFloat = isDarkMode ? 0.28 : 0.20
         let axisAlpha: CGFloat = isDarkMode ? 0.75 : 0.6
-        let backgroundAlpha: CGFloat = isDarkMode ? 0.25 : 0.15
 
         let gridColor = NSColor.separatorColor.withAlphaComponent(gridAlpha)
         let axisColor = NSColor.separatorColor.withAlphaComponent(axisAlpha)
 
-        NSColor.controlBackgroundColor.withAlphaComponent(backgroundAlpha).setFill()
-        NSBezierPath(roundedRect: backgroundRect, xRadius: 6, yRadius: 6).fill()
 
         let maxValue = maxSeriesValue()
         guard maxValue > 0 else {
@@ -1614,7 +1816,7 @@ class StatsChartView: NSView {
             path.move(to: NSPoint(x: rect.minX, y: y))
             path.line(to: NSPoint(x: rect.maxX, y: y))
             color.setStroke()
-            path.lineWidth = 1
+            path.lineWidth = 0.5
             path.stroke()
         }
     }
@@ -1626,7 +1828,7 @@ class StatsChartView: NSView {
         path.move(to: NSPoint(x: rect.minX, y: rect.minY))
         path.line(to: NSPoint(x: rect.maxX, y: rect.minY))
         color.setStroke()
-        path.lineWidth = 1
+        path.lineWidth = 0.5
         path.stroke()
     }
     
@@ -1680,7 +1882,7 @@ class StatsChartView: NSView {
             in: rect,
             maxValue: maxValue,
             color: .systemBlue,
-            lineWidth: 2,
+            lineWidth: 2.25,
             dashPattern: [],
             dotRadius: 2.5
         )
@@ -1753,7 +1955,7 @@ class StatsChartView: NSView {
         path.lineCapStyle = .round
         path.stroke()
         
-        for point in points {
+        if let point = points.last {
             let x = point.x
             let y = point.y
             let dotRect = NSRect(
@@ -2197,15 +2399,15 @@ class StatsChartView: NSView {
 
 // MARK: - KPS 徽章视图
 
-/// 单行 KPS/CPS 胶囊入口，展示为 `⚡️ 25|7`
-class KPSBadgeView: NSView {
+/// Plain peak-rate button; the detail popover remains available.
+class KPSBadgeView: NSButton {
     var onTap: (() -> Void)?
 
-    private let iconLabel: NSTextField
+    private let iconView: NSImageView
     private let rateLabel: NSTextField
 
     override init(frame frameRect: NSRect) {
-        iconLabel = NSTextField(labelWithString: "⚡️")
+        iconView = NSImageView(image: NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: nil) ?? NSImage())
         rateLabel = NSTextField(labelWithString: "0|0")
         super.init(frame: frameRect)
         setupUI()
@@ -2215,22 +2417,32 @@ class KPSBadgeView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override var intrinsicContentSize: NSSize {
+        let label = rateLabel.intrinsicContentSize
+        return NSSize(width: 12 + 2 + label.width + 11, height: max(12, label.height) + 6)
+    }
+
     private func setupUI() {
         wantsLayer = true
         updateAppearance()
         toolTip = "KPS / CPS"
+        title = ""; isBordered = false
+        target = self; action = #selector(activateBadge)
+        setAccessibilityLabel(NSLocalizedString("popover.peakRates", comment: ""))
 
-        iconLabel.font = NSFont.systemFont(ofSize: 10, weight: .regular)
-        iconLabel.textColor = NSColor.systemOrange.withAlphaComponent(0.9)
-        iconLabel.alignment = .center
-        iconLabel.translatesAutoresizingMaskIntoConstraints = false
-        iconLabel.setContentHuggingPriority(.required, for: .horizontal)
+        iconView.contentTintColor = .secondaryLabelColor
+        iconView.symbolConfiguration = .init(pointSize: 10, weight: .medium)
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.widthAnchor.constraint(equalToConstant: 12).isActive = true
+        iconView.heightAnchor.constraint(equalToConstant: 12).isActive = true
+        iconView.setContentHuggingPriority(.required, for: .horizontal)
+        iconView.setAccessibilityElement(false)
 
         rateLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
         rateLabel.textColor = .secondaryLabelColor
         rateLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        let mainStack = NSStackView(views: [iconLabel, rateLabel])
+        let mainStack = NSStackView(views: [iconView, rateLabel])
         mainStack.orientation = .horizontal
         mainStack.alignment = .centerY
         mainStack.spacing = 2
@@ -2250,7 +2462,7 @@ class KPSBadgeView: NSView {
 
     override func layout() {
         super.layout()
-        layer?.cornerRadius = bounds.height / 2
+        layer?.cornerRadius = 0
     }
 
     override func viewDidChangeEffectiveAppearance() {
@@ -2259,7 +2471,7 @@ class KPSBadgeView: NSView {
     }
 
     private func updateAppearance() {
-        layer?.backgroundColor = resolvedCGColor(NSColor.controlBackgroundColor, alpha: 0.7, for: self)
+        layer?.backgroundColor = nil
     }
 
     func update(peakKPS: Int, peakCPS: Int) {
@@ -2294,11 +2506,11 @@ class KPSBadgeView: NSView {
         )
 
         rateLabel.attributedStringValue = attributed
+        setAccessibilityValue("\(peakKPS) KPS · \(peakCPS) CPS")
+        invalidateIntrinsicContentSize()
     }
 
-    override func mouseDown(with event: NSEvent) {
-        onTap?()
-    }
+    @objc private func activateBadge() { onTap?() }
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .pointingHand)

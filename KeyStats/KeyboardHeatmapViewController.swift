@@ -16,11 +16,6 @@ private func resolvedCGColor(_ color: NSColor, alpha: CGFloat, for view: NSView)
     return resolved
 }
 
-private func resolvedColor(_ color: NSColor, for view: NSView) -> NSColor {
-    let cgColor = resolvedCGColor(color, for: view)
-    return NSColor(cgColor: cgColor) ?? color
-}
-
 private func applyCardShadow(_ layer: CALayer?, for view: NSView) {
     guard let layer = layer else { return }
     layer.masksToBounds = false
@@ -561,7 +556,7 @@ final class KeyboardHeatmapViewController: NSViewController {
 
     private func updateAppearance() {
         view.layer?.backgroundColor = resolvedCGColor(NSColor.windowBackgroundColor, for: view)
-        view.window?.backgroundColor = resolvedColor(NSColor.windowBackgroundColor, for: view)
+        // The shared keyboard window's canvas owns its background across pages.
         heatmapContainer.layer?.backgroundColor = resolvedCGColor(NSColor.controlBackgroundColor, alpha: 0.92, for: view)
         heatmapContainer.layer?.borderColor = resolvedCGColor(NSColor.separatorColor, alpha: 0.18, for: view)
         applyCardShadow(heatmapContainer.layer, for: view)

@@ -395,3 +395,112 @@
 "appDetail.heatmap.unsupported" = "当前键盘布局无法显示这些按键，请查看按键明细。";
 "appDetail.heatmap.viewBreakdown" = "查看按键明细";
 "appDetail.heatmap.accessibilityHint" = "切换到按键明细，可查看全部已记录的键名及准确次数。";
+
+// Growth Keyboard / Keyboard Visualization
+"keyboardVisualization.title" = "键盘可视化";
+"keyboardVisualization.entry" = "键盘";
+"keyboardVisualization.pages" = "键盘视图";
+"growth.title" = "成长键盘";
+"growth.previous" = "前一个日历日";
+"growth.next" = "后一个日历日";
+"growth.date" = "快照日期";
+"growth.play" = "从第 1 天播放";
+"growth.pause" = "暂停";
+"growth.today" = "今天";
+"growth.refresh" = "刷新";
+"growth.timeline" = "累计键盘时间轴";
+"growth.date.summary" = "%@ · 第 %ld 天";
+"growth.total" = "累计 %@ 次按键";
+"growth.coverage" = "%@ / %@ 次事件有键位明细。部分旧历史没有键位明细。";
+"growth.participation" = "累计物理键参与次数。一次组合键可以计入多个键帽。";
+"growth.noDailyRecord" = "该日期没有每日记录，沿用此前的累计状态。";
+"growth.empty" = "还没有键盘历史";
+"growth.empty.detail" = "已有历史和当前键盘活动将在这里显示，可点击刷新。";
+"growth.keyboard.description" = "包含 77 个键帽的累计成长键盘";
+"growth.keyboard.help" = "使用方向键或键位详情选择器选择一个键并读取精确次数。颜色表示稳定的长期累计使用进度。";
+"growth.key.details" = "键位详情";
+"growth.key.choose" = "选择一个键";
+"growth.key.prompt" = "选择键帽，查看精确累计次数。";
+"growth.key.summary" = "%@ · 参与 %@ 次 · 累计使用进度 %.1f%%";
+"growth.key.accessibility" = "%@，参与 %ld 次，累计使用进度 %.1f%%";
+"growth.key.LeftCmd" = "左 Command";
+"growth.key.RightCmd" = "右 Command";
+"growth.key.LeftShift" = "左 Shift";
+"growth.key.RightShift" = "右 Shift";
+"growth.key.LeftOption" = "左 Option";
+"growth.key.RightOption" = "右 Option";
+"growth.key.Ctrl" = "Control";
+"growth.key.Return" = "回车键";
+"growth.key.Delete" = "删除键";
+"growth.key.Space" = "空格键";
+"growth.key.CapsLock" = "大写锁定";
+"growth.key.Tab" = "Tab";
+"growth.key.Esc" = "Escape";
+"growth.key.Fn" = "Fn";
+"growth.key.Left" = "左方向键";
+"growth.key.Right" = "右方向键";
+"growth.key.Up" = "上方向键";
+"growth.key.Down" = "下方向键";
+
+/* Production 3D Growth display */
+"growth.mode.editorial" = "Editorial 2.5D";
+"growth.mode.3d" = "3D Growth";
+"growth.mode.choose" = "键盘显示模式";
+"growth.mode.3d.help" = "从第 1 天播放累计 3D 生长，到今天停止。窗口失焦时暂停。";
+"growth.mode.3d.description" = "完整 77 键 3D Growth 键盘";
+
+"mechanicalKeyboard.title" = "机械键盘";
+"Mechanical Keyboard · Click to press" = "机械键盘 · 点击按压";
+"77 keys · mouse only · 160 ms press · fixed height" = "77 键 · 仅鼠标点击 · 160 毫秒按压 · 高度固定";
+"Click a keycap to test its press and return." = "点击键帽，体验按下与回弹。";
+"Selected key: %@" = "当前键位：%@";
+
+"keyboard.interaction" = "试打";
+"keyboard.interaction.hint" = "点击键帽后在此试打 · 固定高度模型 · 不保存输入历史";
+"keyboard.interaction.description" = "77 键交互键盘 · 支持实体按键与鼠标";
+
+// Keyboard accessibility and fork release links
+"keyboard.interaction.help" = "敲实体键或点击键帽可预览按压。Tab 返回使用模式，Shift-Tab 返回模型选择。不保存输入历史。";
+"about.maintainer" = "维护者";
+"button.viewReleases" = "发布版本";
+"update.manualReleases.help" = "在 GitHub 查看 KeyStatsMac 发布版本。App 内更新尚未配置。";
+
+"menu.about" = "关于 KeyStatsMac";
+"menu.quitApp" = "退出 KeyStatsMac";
+"about.upstreamCredit" = "基于 debugtheworldbot 的 keyStats 开发，保留原项目许可与署名。";
+
+// Keyboard window presentation
+"keyboard.window.subtitle" = "看见日常使用的积累。";
+"keyboard.model.mechanical" = "机械";
+"keyboard.mode.growth" = "成长统计";
+"keyboard.mode.choose" = "键盘使用模式";
+"growth.metric.caption" = "累计敲击";
+"growth.snapshot.caption" = "累计截止";
+"growth.usage.caption" = "使用程度";
+"growth.usage.help" = "中性、蓝色和琥珀色依次表示更高的累计键位使用程度。";
+
+/* Menu bar statistics controls */
+"popover.historyRange" = "历史时间范围";
+"popover.historyMetric" = "历史统计指标";
+"popover.chartStyle" = "图表样式";
+"popover.peakRates" = "按键与点击峰值速率";
+
+/* Menu bar daily overview */
+"stats.middleClicks" = "中键点击";
+"popover.topKeys" = "常用键位";
+"popover.showClicks" = "点击明细";
+"popover.hideClicks" = "收起点击明细";
+"popover.showKeys" = "更多键位";
+"popover.hideKeys" = "收起";
+
+"popover.growthKeyboard" = "成长键盘";
+"popover.growthKeyboardSubtitle" = "薄膜 · 机械";
+"popover.growthKeyboardCTA" = "成长与回放";
+"popover.mouse.left" = "左键";
+"popover.mouse.middle" = "中键";
+"popover.mouse.right" = "右键";
+"popover.mouse.back" = "侧键后退";
+"popover.mouse.forward" = "侧键前进";
+"popover.mouse.movement" = "移动";
+"popover.mouse.scroll" = "滚动";
+"popover.growthKeyboardHint" = "打开可交互的 3D 成长键盘";

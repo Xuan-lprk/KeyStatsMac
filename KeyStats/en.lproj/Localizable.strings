@@ -395,3 +395,112 @@
 "appDetail.heatmap.unsupported" = "The recorded keys can't be shown on this keyboard layout. View Key Breakdown for details.";
 "appDetail.heatmap.viewBreakdown" = "View Key Breakdown";
 "appDetail.heatmap.accessibilityHint" = "Switch to Key Breakdown for the full list of recorded key names and exact counts.";
+
+// Growth Keyboard / Keyboard Visualization
+"keyboardVisualization.title" = "Keyboard Visualization";
+"keyboardVisualization.entry" = "Keyboard";
+"keyboardVisualization.pages" = "Keyboard view";
+"growth.title" = "Growth Keyboard";
+"growth.previous" = "Previous calendar day";
+"growth.next" = "Next calendar day";
+"growth.date" = "Snapshot date";
+"growth.play" = "Play from Day 1";
+"growth.pause" = "Pause";
+"growth.today" = "Today";
+"growth.refresh" = "Refresh";
+"growth.timeline" = "Cumulative keyboard timeline";
+"growth.date.summary" = "%@ · Day %ld";
+"growth.total" = "%@ total key presses";
+"growth.coverage" = "Key details are available for %@ of %@ events. Some older history has no key details.";
+"growth.participation" = "Cumulative key participation. A combination can contribute to multiple keycaps.";
+"growth.noDailyRecord" = "No daily record here; the cumulative state is carried forward.";
+"growth.empty" = "No keyboard history yet";
+"growth.empty.detail" = "Saved and current keyboard activity will appear here. Refresh to check again.";
+"growth.keyboard.description" = "Cumulative Growth Keyboard with 77 keycaps";
+"growth.keyboard.help" = "Use arrow keys or the Key Details selector to choose a key and read its exact count. Color represents stable cumulative usage progress.";
+"growth.key.details" = "Key details";
+"growth.key.choose" = "Choose a key";
+"growth.key.prompt" = "Select a key to see its exact cumulative count.";
+"growth.key.summary" = "%@ · %@ participations · usage progress %.1f%%";
+"growth.key.accessibility" = "%@, %ld participations, usage progress %.1f%%";
+"growth.key.LeftCmd" = "Left Command";
+"growth.key.RightCmd" = "Right Command";
+"growth.key.LeftShift" = "Left Shift";
+"growth.key.RightShift" = "Right Shift";
+"growth.key.LeftOption" = "Left Option";
+"growth.key.RightOption" = "Right Option";
+"growth.key.Ctrl" = "Control";
+"growth.key.Return" = "Return";
+"growth.key.Delete" = "Delete";
+"growth.key.Space" = "Space";
+"growth.key.CapsLock" = "Caps Lock";
+"growth.key.Tab" = "Tab";
+"growth.key.Esc" = "Escape";
+"growth.key.Fn" = "Fn";
+"growth.key.Left" = "Left Arrow";
+"growth.key.Right" = "Right Arrow";
+"growth.key.Up" = "Up Arrow";
+"growth.key.Down" = "Down Arrow";
+
+/* Production 3D Growth display */
+"growth.mode.editorial" = "Editorial 2.5D";
+"growth.mode.3d" = "3D Growth";
+"growth.mode.choose" = "Keyboard display mode";
+"growth.mode.3d.help" = "Play cumulative 3D growth from Day 1 to Today. Playback pauses when the window loses focus.";
+"growth.mode.3d.description" = "Complete 77-key 3D Growth keyboard";
+
+"mechanicalKeyboard.title" = "Mechanical Keyboard";
+"Mechanical Keyboard · Click to press" = "Mechanical Keyboard · Click to press";
+"77 keys · mouse only · 160 ms press · fixed height" = "77 keys · mouse only · 160 ms press · fixed height";
+"Click a keycap to test its press and return." = "Click a keycap to test its press and return.";
+"Selected key: %@" = "Selected key: %@";
+
+"keyboard.interaction" = "Try typing";
+"keyboard.interaction.hint" = "Click a keycap, then type here · fixed-height model · no input history";
+"keyboard.interaction.description" = "Interactive 77-key keyboard · keyboard and mouse";
+
+// Keyboard accessibility and fork release links
+"keyboard.interaction.help" = "Press a physical key or click a keycap to preview its press. Tab moves to the experience selector; Shift-Tab moves to the model selector. No input history is saved.";
+"about.maintainer" = "Maintained by";
+"button.viewReleases" = "Releases";
+"update.manualReleases.help" = "Open KeyStatsMac releases on GitHub. In-app updates are not configured yet.";
+
+"menu.about" = "About KeyStatsMac";
+"menu.quitApp" = "Quit KeyStatsMac";
+"about.upstreamCredit" = "Based on keyStats by debugtheworldbot. Original license and attribution are retained.";
+
+// Keyboard window presentation
+"keyboard.window.subtitle" = "See your everyday use take shape.";
+"keyboard.model.mechanical" = "Mechanical";
+"keyboard.mode.growth" = "Growth";
+"keyboard.mode.choose" = "Keyboard experience";
+"growth.metric.caption" = "Cumulative key presses";
+"growth.snapshot.caption" = "Snapshot";
+"growth.usage.caption" = "Usage";
+"growth.usage.help" = "Neutral, blue and amber represent increasing cumulative key usage.";
+
+/* Menu bar statistics controls */
+"popover.historyRange" = "History range";
+"popover.historyMetric" = "History metric";
+"popover.chartStyle" = "Chart style";
+"popover.peakRates" = "Peak typing and click rates";
+
+/* Menu bar daily overview */
+"stats.middleClicks" = "Middle Clicks";
+"popover.topKeys" = "Top Keys";
+"popover.showClicks" = "Click details";
+"popover.hideClicks" = "Hide click details";
+"popover.showKeys" = "More keys";
+"popover.hideKeys" = "Show less";
+
+"popover.growthKeyboard" = "Growth Keyboard";
+"popover.growthKeyboardSubtitle" = "Mac + Mechanical";
+"popover.growthKeyboardCTA" = "Growth & Replay";
+"popover.mouse.left" = "Left";
+"popover.mouse.middle" = "Middle";
+"popover.mouse.right" = "Right";
+"popover.mouse.back" = "Side Back";
+"popover.mouse.forward" = "Side Forward";
+"popover.mouse.movement" = "Mouse";
+"popover.mouse.scroll" = "Scroll";
+"popover.growthKeyboardHint" = "Open the interactive 3D Growth Keyboard";

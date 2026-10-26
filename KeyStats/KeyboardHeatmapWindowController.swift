@@ -4,17 +4,19 @@ final class KeyboardHeatmapWindowController: NSWindowController {
     static let shared = KeyboardHeatmapWindowController()
 
     private init() {
-        let viewController = KeyboardHeatmapViewController()
+        let viewController = KeyboardVisualizationViewController()
         let window = NSWindow(contentViewController: viewController)
-        let fixedSize = NSSize(width: 860, height: 460)
+        let available = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1160, height: 780)
+        let fixedSize = NSSize(width: min(1100, available.width - 60), height: min(720, available.height - 90))
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.title = NSLocalizedString("keyboardHeatmap.windowTitle", comment: "")
-        window.titleVisibility = .hidden
+        window.title = NSLocalizedString("keyboardVisualization.title", comment: "")
+        window.titleVisibility = .visible
         window.titlebarSeparatorStyle = .none
         window.titlebarAppearsTransparent = true
-        window.styleMask.insert(.fullSizeContentView)
+        window.appearance = NSAppearance(named: .aqua)
         window.isMovableByWindowBackground = true
-        window.backgroundColor = .windowBackgroundColor
+        window.backgroundColor = KeyboardVisualizationCanvasView.backgroundColor(
+            for: window.effectiveAppearance, showsGrowth: true)
         window.setContentSize(fixedSize)
         window.minSize = fixedSize
         window.maxSize = fixedSize
@@ -39,13 +41,9 @@ final class KeyboardHeatmapWindowController: NSWindowController {
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
 
-        if let vc = contentViewController as? KeyboardHeatmapViewController {
-            if wasVisible || wasMiniaturized {
-                vc.refreshData()
-            } else {
-                vc.resetToTodayAndRefresh()
-            }
+        if let vc = contentViewController as? KeyboardVisualizationViewController {
+            vc.refreshForPresentation(resetToToday: !wasVisible && !wasMiniaturized)
+            if !vc.showsGrowth { AppDelegate.trackPageView("keyboard_heatmap") }
         }
-        AppDelegate.trackPageView("keyboard_heatmap")
     }
 }

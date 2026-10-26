@@ -2,6 +2,15 @@
 
 本文档是面向 Codex/AI Agent 的项目操作手册。所有判断以当前源码为准；如果本文档与实现不一致，先核对代码，再以最小范围修正文档或实现。仓库内更深层目录若存在自己的 `AGENTS.md`，该目录下的工作同时受更具体规则约束。
 
+## 工作区与交接
+
+- 当前真实仓库是 `/Users/quxuan/GitHub/KeyStats/KeyStatsMac`。新对话先核对 `pwd`、`git rev-parse --show-toplevel`、`git status --short`，再读本文和 `PROJECT.md`。
+- 旧聊天默认 cwd `/Users/quxuan/Downloads/KeyStats` 不是 Git 仓库。不要在那个目录另建副本，也不要把 `/tmp` 当成项目工作区。
+- 工作目录或可写范围不匹配时，先说明并解决访问问题；不要长期依赖 `/tmp/*.patch` 中转源码修改，导致 Edited Files 只显示临时补丁而难以审查真实 diff。
+- `/tmp` 可以存放 build、PNG、trace、QA JSON 和日志，它们不是真实源码，也不是待同步 worktree。真实源码变更必须能在真实 repo 中核对。
+- 新增未跟踪文件不会出现在普通 `git diff` 中；同时检查 `git ls-files --modified --others --exclude-standard`，不能据此误报文件丢失。
+- 当前未提交代码和实验目录必须保留；提交/验收状态及建议分组见 `PROJECT.md`。整理交接不等于获得 commit、push 或历史重写授权。
+
 ## 默认沟通格式
 
 开始处理任务时，先用 5 行以内告诉用户：
@@ -104,6 +113,9 @@ macOS input events
 
 关键职责如下：
 
+- `KeyStats/AppLaunchMode.swift`
+  - 进程级启动策略；仅 Debug 显式参数 `--debug-gui-acceptance` 启用验收模式，Release 忽略，不持久化参数。
+  - 验收模式拒绝不匹配的 Helper 协议版本；普通模式保留既有兼容行为。
 - `KeyStats/AppDelegate.swift`
   - 启动菜单栏 UI、更新与同步协调器。
   - 安装并连接 Helper，设置 XPC event sink。
@@ -149,9 +161,24 @@ macOS input events
   - 当前菜单栏视图已经使用 `NSHostingView` 嵌入 SwiftUI，但 shell 仍为 AppKit。
 - `KeyStats/StatsPopoverViewController.swift`
   - AppKit 统计 popover，部分数值/KPS 视图嵌入 SwiftUI。
+  - 当前菜单按用户 2026-10-26 的固定规格实施：384pt 宽、系统 `.popover` 材质，顺序为顶部机械键帽特写入口、今日双列总量、5×3 常用键阵列、96pt 趋势图、全宽鼠标短行及原有底栏，全部统计默认展示。顶部 360×92pt 的 `GrowthKeyboardPopover` 为正式机械网格离线渲染的 12 键局部特写，浅／深色分别布光、各有 1x／2x 透明 PNG；Popover 不创建 SceneKit／Metal，也不额外查询累计历史。入口为原生按钮，hover 图片上移 2pt、箭头前移 2pt，140ms ease-out；移出／关闭立即复位，Reduce Motion 仅改变 CTA 颜色。侧键整行仅有数据时显示；鼠标短标签保留完整 tooltip／AX 名称。底栏继续使用原生 recessed／悬停边框，趋势分段仍为原生控件。用户已否定当前菜单整体视觉，开发暂停；本次按明确授权 commit／push 作为其他 AI 分析的交接快照，不得当作定稿或自行继续尝试；此前双图入口、三列明细、折叠版及大面积键盘草图均为历史候选。
   - 只在显示期间订阅统计更新并运行 KPS 刷新 timer。
 - `KeyStats/KeyboardHeatmapViewController.swift`
   - AppKit 键盘热力图与日期切换；窗口可见时订阅统计更新。
+- `KeyStats/KeyboardVisualizationViewController.swift`、`GrowthKeyboardViewController.swift`
+  - 统一 Keyboard 窗口的 Mac / 机械模型与试打切换；Growth 使用正式累计显示查询、日期选择和有界回放，旧全局 Heatmap 分页已移除。
+- `KeyStats/GrowthKeyboardPresentation.swift`、`GrowthPlaybackState.swift`
+  - 缓存 display-aggregated timeline、日历日选择，以及可取消的 one-shot 回放；不读取历史文件或新增持久化。
+- `KeyStats/EditorialKeyboardRenderer.swift`
+  - 正式 77 键 Editorial 2.5D renderer；静态路径/layer 缓存，动态 count/material 更新。
+  - 同文件的 `KeyboardVisualizationCanvasView` 统一窗口/页面背景；只有最外层 canvas 可修改 window background。AppKit backing layer frame 由 AppKit 管理，不得在 layout 中设置为局部 bounds。
+- `KeyStats/GrowthKeyboard3DGeometry.swift`
+  - 正式 Geometry v2 的固定 progress → height / bevel 映射；与统计 progress 分离，不按当天最高值或日期归一化。
+- `KeyStats/GrowthKeyboard3DScene.swift`
+  - 消费 Editorial 的显式只读 scene layout，保留 77 键几何对象，执行一次静态 SceneKit snapshot；无 prototype 文件依赖或持续渲染回调。
+- `KeyStats/GrowthKeyboard3DRenderer.swift`
+  - 管理懒加载场景、80ms one-shot 合并、按 counts / canvas 区分的三帧 LRU、字形与次数 overlay、键位选择及取消 token。
+  - 3D 回放在图像、次数就绪后通知 controller 提交日期，再由 playback driver 等待并推进。
 - `KeyStats/AnalyticsManager.swift`
   - 唯一允许直接接触 PostHog SDK 的产品分析入口。
 - `Package.swift`、`KeyStatsTests/`
@@ -175,6 +202,16 @@ macOS input events
 
 涉及 Helper、Bundle ID、Mach service、签名、cdhash、LaunchAgent、entitlements、TCC 或 Accessibility 的改动一律视为高风险。修改前必须完整追踪安装、签名、权限和 XPC 两端的影响。
 
+### 构建、普通启动与 GUI 验收模式
+
+- build-only 不等于启动授权。普通 Debug 仍执行 `HelperSupervisor.ensureInstalled()`、LaunchAgent 管理、旧权限迁移；Sparkle 还需有效公钥与显式 App 内更新开关均就绪才启动；Debug 跳过部分权限提示不表示这些副作用关闭。
+- `--debug-gui-acceptance` 仅在 Debug 生效，跳过上述安装/迁移与 Sparkle 初始化。`UpdateManager` 的初始化、popover 探测、手动更新入口均有策略 guard，不能只在 AppDelegate 中跳过单例就宣称 updater 不会创建。
+- 在上述验收模式内可加 `--debug-open-keyboard` 或 `--debug-open-statistics` 请求显示相应界面；这些便捷入口仅 Debug 编译，不写 defaults，也不改变验收模式的其他数据与 Helper 边界。
+- 验收模式仍连接现有 Helper。协议版本必须等于 `KeyStatsHelper/HelperLocations.swift` 的 `interfaceVersion`；兼容且已有授权时仍会 `startMonitoring`，没有授权或连接失败时仅报告，不安装修复、不权限轮询或自动重连。
+- 此模式不是只读数据沙盒或全局离线模式；正式 StatsManager 持久化、Analytics consent、Sync 启动及退出时 flush 仍存在。Helper 只接受一个活动连接，不同时运行两份主 App。
+- 普通安装路径在 Helper 缺失、任一 cdhash 读取失败或 hash 不同时复制；即使 hash 相同，LaunchAgent plist 不同或服务未加载仍可能写配置/注册服务。hash 一致不能单独证明普通启动无系统改动。
+- 2026-10-25 用户授权更新来源迁移：`KeyStats/Info.plist` 已指向 `Xuan-lprk/KeyStatsMac` 的 appcast，`SUEnableAutomaticChecks = false`，上游公钥已替换为用户提供的公钥。`KeyStatsInAppUpdatesEnabled = false`，仅配置公钥不启用更新；未明确开启 App 内更新或公钥无效时，`UpdateManager` 初始化、探测和订阅不创建 Sparkle；普通模式的手动入口仅打开自己的 Releases 页面。不得自行生成/导出私钥、启用自动更新或发布；Keychain、CI Secret、签名和首发验收仍需相应授权。
+
 ## UI 技术方向
 
 当前 UI 以 AppKit 为主，并已有少量 SwiftUI 嵌入。未来可逐页迁移用户可见页面，例如：
@@ -193,6 +230,19 @@ macOS input events
 - 可以长期保留 `NSStatusItem`、`NSPopover`、`NSWindow`、`NSWindowController` 等 AppKit shell。
 - 不为了“纯 SwiftUI”牺牲菜单栏、窗口焦点、popover、快捷键、权限提示或现有行为。
 - 动画和高频刷新只应在相关窗口可见时运行，消失或关闭时必须停止订阅和 timer。
+
+## 键盘视觉与 prototype 边界
+
+- 当前正式入口为统一 Keyboard 窗口：默认 Mac 3D Growth，可切换机械 3D Growth；两者共用日期、累计数据和键位详情。顶部通过“成长统计 / 试打”分段选择器切换，试打进入固定高度模型，鼠标或窗口内实体按键触发短暂下沉回弹。累计总量与截止日期位于键盘上方，回放/时间轴和键位详情集中在底部卡片。旧全局 Heatmap 分页已移除，per-app Heatmap 保留；Editorial 2.5D 实现仍保留，但统一窗口不显示其切换控件。
+- 2026-10-24 用户已认可新机械 77 键、相机、无投射阴影、字形及 Growth 配色，当前进入收尾。旧 Mechanical v3 因与 Mac 太相似被否定，属于历史实验，不能再据此禁止当前已获授权的新模型集成。完整 VoiceOver / Reduce Motion / 能耗和发布验收仍单独记录。
+- Mechanical 使用 `MechanicalKeyboardGeometry` / `MechanicalKeyboardScene` / `MechanicalKeyboardView`；布局复用 Editorial 的显式只读 `sceneLayout`。机械 Growth 高度为 `0.35 + 0.40 × progress` u，颜色复用 Editorial Usage palette；高度变化重连侧壁，不拉伸顶面。Mac / 机械共用 Play from Day 1，复用同一 playback driver 与呈现确认，不另建机械播放调度。
+- 试打只通过窗口 NSResponder 的 `keyDown` / `flagsChanged` 接收物理 keyCode，不读取文本、不保存顺序、不新增全局监听；虚拟点击不写入统计。Mac 固定视觉高度 0.30u；Mac / 机械均有有界按压，切换、失焦、隐藏、最小化和关闭时取消。试打根视图提供 AX group、帮助与当前键名；Tab / Shift-Tab 分别返回使用模式 / 模型选择，退出试打不将焦点留在隐藏画面。
+- 正式 Growth 的数据只能来自 StatsManager 的 cumulative/display 查询，包含未落盘 currentStats 和既有 Sync display 语义；不得复制 prototype 的磁盘读取路径。Today 在打开/获得焦点、回到 Today、手动刷新时更新，不逐事件重绘。
+- 静态 3D 复用 `GrowthKeyboard3DRenderer` 的 80ms one-shot 合并、三帧 LRU、键位选择和取消 token。新帧呈现后再共同提交日期、次数和详情；等待或失焦取消时保留最后完整帧及最新呈现确认，恢复后确认最新图像，不在隐藏期间确认或自动继续播放。两种模型的 Replay 均等当前图像呈现后推进，到 Today 停止；没有永久 Timer / DisplayLink。
+- `KeyboardLayout` 提供共享 identity/结构；保留已认可的 Editorial 比例、Usage palette 和 stable progress。优先级为易读性、高级感、性能、3D 程度；不因收尾重设计模型、布局、配色或统计语义。
+- 正式源码与 Xcode target 不依赖 `Prototypes/`。实验的 `@testable` / layer-introspection bridge、plist reader、OBJ 资产不属于生产 API；历史实验保留本地，未通过的 demo 不加入本轮提交。已提交的旧 Porcelain 也不为此改写历史。
+- 后续新造型或交互目标继续遵循 `Plan → Approval → Minimal Prototype → Visual Review → Integration`，每次只做一个经过验收的小目标。当前模型已完成相应授权，不重复要求从四键开始；新需求不能借收尾自动扩展。
+- 原型性能不等于正式 Growth 性能，11 键数据不能代表正式 77 键。构建、拓扑或单测通过不能代替视觉、GUI 和能耗验收。
 
 ## Analytics 规则
 
@@ -275,11 +325,18 @@ xcodebuild \
 
 当前自动测试事实：
 
-- `Package.swift` 定义 `KeyStatsCore` 和 `KeyStatsCoreTests`。
+- `Package.swift` 定义 `KeyStatsCore`、`KeyStatsEventCore`、本地 PostHog 测试替身和 `KeyStatsCoreTests`；SwiftPM 不使用正式 PostHog SDK 发送数据。
 - `KeyStatsTests/` 当前覆盖模型、App attribution、Analytics consent、`StatsManager` 的本地持久化/导入/合并/历史、同步核心和更新检查协调逻辑。
-- 本次文档更新时共发现 114 个 XCTest；这是当前快照，不是永久数量保证。
+- 最新菜单特写与阵列布局检查在 `build/MenuBarCloseup/`：225 项 XCTest、Debug 构建、三语资源 lint 通过；同源隔离原生检查覆盖三语、深浅色、15／2／空键位及侧键行，完整有侧键为 384×626pt、无侧键为 384×606pt、2 键／空数据为 384×532pt，鼠标短标签无截断。静态图透明通道、1x／2x 尺寸与独立深浅色渲染检查通过；原生按钮鼠标跟踪、键盘动作、图表切换和关闭清理通过。Hover／Reduce Motion 使用隔离分支注入，不能替代正式桌面的真实悬停、完整 VoiceOver 和能耗验收；用户已否定整体视觉，当前仅保留分析快照。
+- 旧双图入口验证在 `build/KimiMenuVerification/`：225 项 XCTest、Debug 构建、资源 lint、三语同源隔离原生检查通过。该阶段英文紧凑长标签省略已由当前短行布局替代，旧记录不代表当前界面。
+- 菜单控件减轻检查在 `build/MenuBarControls/`：225 项 XCTest、Debug 构建、英文浅色与中文深色的同源隔离原生检查通过，完整示例尺寸仍为 380 × 691 点；真实悬停／焦点及用户视觉验收未完成。
+- 默认全部展示菜单记录在 `build/MenuBarVisible/`：225 项 XCTest、Debug 构建及完整／深色中文／空数据的同源隔离原生检查通过。完整示例 380 × 691 点，少量键／空数据示例 380 × 583 点，默认可见与图表切换、弹窗关闭清理通过；用户视觉验收仍待确认。
+- 历史折叠菜单候选记录在 `build/MenuBarCompact/`：225 项 XCTest、Debug 构建及完整／深色中文／空数据的同源隔离原生检查通过，默认 380 × 359 点，八种展开组合可恢复；正式 App 验收参数启动日志确认显示成功。该折叠布局已被用户否定，见 `PROJECT.md` 最新记录。
+- 最近一轮界面验证见 `PROJECT.md` 开头；2026-10-25 `build/MenuBarOverview/` 为 **225 个 XCTest、0 failures** 与 Debug `BUILD SUCCEEDED`，同源隔离检查覆盖 Top 5、展开收起、中键总量和空数据；用户视觉验收未通过，正式窗口读取限制单独记录。此前 MenuBarRefresh / KeyboardWindowRefresh / AccessibilityReview / PublicKeySetup 为 225 项，MechanicalReplay / KeyboardCleanup 为 224 项，MechanicalGrowth 为 223 项。日志位于本地忽略目录，旧数量仅作为对应阶段历史保留，不能当作新一轮执行结果。
 - SwiftPM 会编译真实 `StatsManager.swift`，测试通过独立 `UserDefaults`、固定时间和关闭自动调度的 environment 创建隔离实例。
 - `StatsManagerTests` 当前直接覆盖持久化、import/merge、跨日 rollover、历史日期 identity 和异常 history key 的确定性 normalization。
+- 当前还覆盖 Physical Mapping、KeyboardLayout、Cumulative Snapshot、Day Index、Stable Progress，以及 Growth 的正式数据适配、回放取消、实际 renderer 路径缓存、窗口背景语义。AppKit 对象单测不等于完整 GUI / VoiceOver / 能耗验收。
+- `GrowthKeyboard3DTests.swift` 覆盖逐帧呈现后推进、过期确认、日期/次数与图像一致、正式 controller 的模式与日期、三帧 LRU、隐藏取消、键位详情和 Geometry v2；`AppLaunchModeTests.swift` 覆盖参数的 Debug / Release 条件与 Helper 版本策略。启动策略单测不等于真实 XPC / TCC 或 Sparkle 安装更新的验收。
 - SwiftPM 不编译 App-only 的 `StatsManagerLiveEnvironment.swift`，也不覆盖 AppDelegate、Helper、XPC、TCC/权限或实际 UI 行为。
 
 每次实现完成后至少：
@@ -288,6 +345,8 @@ xcodebuild \
 2. 构建 `KeyStats` scheme。
 3. 查看 `git diff --check`、`git diff` 和 `git status`。
 4. 确认没有无关文件变化。
+
+纯文档任务按用户范围只做源码对照、链接、diff 和文件变更检查；用户禁止构建/测试/GUI 时不执行它们，也不把旧日志写成新测试结果。
 
 `BUILD SUCCEEDED` 只证明编译和链接成功。涉及 Helper、权限、TCC、XPC、输入采集、窗口生命周期或能耗时，还需要对应的真机手动验证或 Instruments 数据；不能仅凭 build 成功宣称功能已完全验证。
 

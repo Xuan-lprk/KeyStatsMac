@@ -75,7 +75,7 @@ final class SettingsViewController: NSViewController, NSTextFieldDelegate {
     private let thresholdMaximum = 1_000_000
     private let thresholdStep = 100.0
     private let dynamicIconColorStyleKey = "dynamicIconColorStyle"
-    private let githubRepositoryURL = URL(string: "https://github.com/debugtheworldbot/keyStats")
+    private let githubRepositoryURL = URL(string: "https://github.com/Xuan-lprk/KeyStatsMac")
     private static var cachedGitHubIconImage: NSImage?
 
     private lazy var thresholdFormatter: NumberFormatter = {

@@ -395,3 +395,112 @@
 "appDetail.heatmap.unsupported" = "目前鍵盤配置無法顯示這些按鍵，請查看按鍵明細。";
 "appDetail.heatmap.viewBreakdown" = "查看按鍵明細";
 "appDetail.heatmap.accessibilityHint" = "切換到按鍵明細，可查看全部已記錄的鍵名及準確次數。";
+
+// Growth Keyboard / Keyboard Visualization
+"keyboardVisualization.title" = "鍵盤視覺化";
+"keyboardVisualization.entry" = "鍵盤";
+"keyboardVisualization.pages" = "鍵盤檢視";
+"growth.title" = "成長鍵盤";
+"growth.previous" = "前一個日曆日";
+"growth.next" = "後一個日曆日";
+"growth.date" = "快照日期";
+"growth.play" = "從第 1 天播放";
+"growth.pause" = "暫停";
+"growth.today" = "今天";
+"growth.refresh" = "重新整理";
+"growth.timeline" = "累計鍵盤時間軸";
+"growth.date.summary" = "%@ · 第 %ld 天";
+"growth.total" = "累計 %@ 次按鍵";
+"growth.coverage" = "%@ / %@ 次事件有鍵位明細。部分舊歷史沒有鍵位明細。";
+"growth.participation" = "累計實體鍵參與次數。一次組合鍵可以計入多個鍵帽。";
+"growth.noDailyRecord" = "該日期沒有每日記錄，沿用此前的累計狀態。";
+"growth.empty" = "還沒有鍵盤歷史";
+"growth.empty.detail" = "已有歷史和目前鍵盤活動將在這裡顯示，可點擊重新整理。";
+"growth.keyboard.description" = "包含 77 個鍵帽的累計成長鍵盤";
+"growth.keyboard.help" = "使用方向鍵或鍵位詳情選擇器選擇一個鍵並讀取精確次數。顏色表示穩定的長期累計使用進度。";
+"growth.key.details" = "鍵位詳情";
+"growth.key.choose" = "選擇一個鍵";
+"growth.key.prompt" = "選擇鍵帽，查看精確累計次數。";
+"growth.key.summary" = "%@ · 參與 %@ 次 · 累計使用進度 %.1f%%";
+"growth.key.accessibility" = "%@，參與 %ld 次，累計使用進度 %.1f%%";
+"growth.key.LeftCmd" = "左 Command";
+"growth.key.RightCmd" = "右 Command";
+"growth.key.LeftShift" = "左 Shift";
+"growth.key.RightShift" = "右 Shift";
+"growth.key.LeftOption" = "左 Option";
+"growth.key.RightOption" = "右 Option";
+"growth.key.Ctrl" = "Control";
+"growth.key.Return" = "Return";
+"growth.key.Delete" = "刪除鍵";
+"growth.key.Space" = "空格鍵";
+"growth.key.CapsLock" = "大寫鎖定";
+"growth.key.Tab" = "Tab";
+"growth.key.Esc" = "Escape";
+"growth.key.Fn" = "Fn";
+"growth.key.Left" = "左方向鍵";
+"growth.key.Right" = "右方向鍵";
+"growth.key.Up" = "上方向鍵";
+"growth.key.Down" = "下方向鍵";
+
+/* Production 3D Growth display */
+"growth.mode.editorial" = "Editorial 2.5D";
+"growth.mode.3d" = "3D Growth";
+"growth.mode.choose" = "鍵盤顯示模式";
+"growth.mode.3d.help" = "從第 1 天播放累計 3D 生長，到今天停止。視窗失焦時暫停。";
+"growth.mode.3d.description" = "完整 77 鍵 3D Growth 鍵盤";
+
+"mechanicalKeyboard.title" = "機械鍵盤";
+"Mechanical Keyboard · Click to press" = "機械鍵盤 · 點擊按壓";
+"77 keys · mouse only · 160 ms press · fixed height" = "77 鍵 · 僅滑鼠點擊 · 160 毫秒按壓 · 高度固定";
+"Click a keycap to test its press and return." = "點擊鍵帽，體驗按下與回彈。";
+"Selected key: %@" = "目前鍵位：%@";
+
+"keyboard.interaction" = "試打";
+"keyboard.interaction.hint" = "點擊鍵帽後在此試打 · 固定高度模型 · 不儲存輸入歷史";
+"keyboard.interaction.description" = "77 鍵互動鍵盤 · 支援實體按鍵與滑鼠";
+
+// Keyboard accessibility and fork release links
+"keyboard.interaction.help" = "按實體鍵或點擊鍵帽可預覽按壓。Tab 返回使用模式，Shift-Tab 返回模型選擇。不儲存輸入歷史。";
+"about.maintainer" = "維護者";
+"button.viewReleases" = "發佈版本";
+"update.manualReleases.help" = "在 GitHub 查看 KeyStatsMac 發佈版本。App 內更新尚未設定。";
+
+"menu.about" = "關於 KeyStatsMac";
+"menu.quitApp" = "結束 KeyStatsMac";
+"about.upstreamCredit" = "基於 debugtheworldbot 的 keyStats 開發，保留原專案許可與署名。";
+
+// Keyboard window presentation
+"keyboard.window.subtitle" = "看見日常使用的累積。";
+"keyboard.model.mechanical" = "機械";
+"keyboard.mode.growth" = "成長統計";
+"keyboard.mode.choose" = "鍵盤使用模式";
+"growth.metric.caption" = "累計敲擊";
+"growth.snapshot.caption" = "累計截至";
+"growth.usage.caption" = "使用程度";
+"growth.usage.help" = "中性、藍色和琥珀色依次表示更高的累計鍵位使用程度。";
+
+/* Menu bar statistics controls */
+"popover.historyRange" = "歷史時間範圍";
+"popover.historyMetric" = "歷史統計指標";
+"popover.chartStyle" = "圖表樣式";
+"popover.peakRates" = "按鍵與點擊峰值速率";
+
+/* Menu bar daily overview */
+"stats.middleClicks" = "中鍵點擊";
+"popover.topKeys" = "常用鍵位";
+"popover.showClicks" = "點擊明細";
+"popover.hideClicks" = "收起點擊明細";
+"popover.showKeys" = "更多鍵位";
+"popover.hideKeys" = "收起";
+
+"popover.growthKeyboard" = "成長鍵盤";
+"popover.growthKeyboardSubtitle" = "薄膜 · 機械";
+"popover.growthKeyboardCTA" = "成長與回放";
+"popover.mouse.left" = "左鍵";
+"popover.mouse.middle" = "中鍵";
+"popover.mouse.right" = "右鍵";
+"popover.mouse.back" = "側鍵後退";
+"popover.mouse.forward" = "側鍵前進";
+"popover.mouse.movement" = "移動";
+"popover.mouse.scroll" = "捲動";
+"popover.growthKeyboardHint" = "打開可互動的 3D 成長鍵盤";

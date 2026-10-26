@@ -26,6 +26,7 @@ let package = Package(
             path: "KeyStats",
             exclude: [
                 "Assets.xcassets",
+                "MechanicalKeyboardWindowController.swift",
                 "Main.storyboard",
                 "Info.plist",
                 "en.lproj",
@@ -35,6 +36,7 @@ let package = Package(
                 "AppDetailView.swift",
                 "KeyboardHeatmapView.swift",
                 "KeyboardHeatmapRepresentable.swift",
+                "KeyboardVisualizationViewController.swift",
                 "KeyStats.entitlements",
                 "NotificationManager.swift",
                 "StatsManagerLiveEnvironment.swift",
@@ -65,6 +67,7 @@ let package = Package(
                 "MainWindowViewController.swift"
             ],
             sources: [
+                "AppLaunchMode.swift",
                 "AppStats.swift",
                 "AppKeyBreakdown.swift",
                 "AppDetailPresentation.swift",
@@ -76,6 +79,16 @@ let package = Package(
                 "CumulativeKeyboardSnapshot.swift",
                 "KeyboardTrackingPeriod.swift",
                 "KeyboardUsageProgress.swift",
+                "GrowthKeyboardPresentation.swift",
+                "GrowthPlaybackState.swift",
+                "EditorialKeyboardRenderer.swift",
+                "GrowthKeyboard3DGeometry.swift",
+                "GrowthKeyboard3DScene.swift",
+                "GrowthKeyboard3DRenderer.swift",
+                "MechanicalKeyboardScene.swift",
+                "MechanicalKeyboardGeometry.swift",
+                "MechanicalKeyboardView.swift",
+                "GrowthKeyboardViewController.swift",
                 "StatsManager.swift",
                 "AnalyticsManager.swift",
                 "UpdateCheckCoordinator.swift",
@@ -90,7 +103,7 @@ let package = Package(
             name: "KeyStatsCoreTests",
             dependencies: ["KeyStatsCore", "KeyStatsEventCore", "PostHog"],
             path: "KeyStatsTests",
-            sources: ["KeyboardUsageProgressTests.swift", "KeyboardTrackingPeriodTests.swift", "CumulativeKeyboardSnapshotTests.swift", "KeyboardLayoutTests.swift", "PhysicalKeyMappingTests.swift", "AppStatsTests.swift", "AppKeyBreakdownTests.swift", "AppDetailPresentationTests.swift", "SystemMediaKeyTests.swift", "InteractionProfileTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
+            sources: ["GrowthKeyboard3DTests.swift", "AppLaunchModeTests.swift", "GrowthKeyboardTests.swift", "KeyboardUsageProgressTests.swift", "KeyboardTrackingPeriodTests.swift", "CumulativeKeyboardSnapshotTests.swift", "KeyboardLayoutTests.swift", "PhysicalKeyMappingTests.swift", "AppStatsTests.swift", "AppKeyBreakdownTests.swift", "AppDetailPresentationTests.swift", "SystemMediaKeyTests.swift", "InteractionProfileTests.swift", "AppActivityTrackerTests.swift", "AnalyticsManagerTests.swift", "StatsManagerTests.swift", "StatsModelsTests.swift", "UpdateCheckCoordinatorTests.swift", "SyncCoreTests.swift"]
         )
     ]
 )

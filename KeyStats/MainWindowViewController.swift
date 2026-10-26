@@ -2,7 +2,7 @@ import Cocoa
 
 class MainWindowViewController: NSViewController {
     
-    private let authorURL = URL(string: "https://github.com/debugtheworldbot")
+    private let authorURL = URL(string: "https://github.com/Xuan-lprk")
     
     override func loadView() {
         let mainView = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: 270))
@@ -16,14 +16,14 @@ class MainWindowViewController: NSViewController {
     }
     
     private func setupUI() {
-        let titleLabel = makeLabel(text: "KeyStats", size: 22, weight: .bold)
+        let titleLabel = makeLabel(text: "KeyStatsMac", size: 22, weight: .bold)
         let versionLabel = makeLabel(text: versionText(), size: 12, weight: .regular)
         versionLabel.textColor = .secondaryLabelColor
         
-        let authorLabel = makeLabel(text: NSLocalizedString("about.author", comment: ""), size: 12, weight: .regular)
+        let authorLabel = makeLabel(text: NSLocalizedString("about.maintainer", comment: ""), size: 12, weight: .regular)
         authorLabel.textColor = .secondaryLabelColor
         
-        let linkButton = NSButton(title: "github.com/debugtheworldbot", target: self, action: #selector(openAuthorLink))
+        let linkButton = NSButton(title: "github.com/Xuan-lprk", target: self, action: #selector(openAuthorLink))
         linkButton.isBordered = false
         linkButton.font = NSFont.systemFont(ofSize: 13, weight: .medium)
         linkButton.contentTintColor = .linkColor

@@ -63,6 +63,19 @@
 		B1000005 /* DisplayStatsAggregator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000005 /* DisplayStatsAggregator.swift */; };
 		B1000006 /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000006 /* SyncCoordinator.swift */; };
 		B1000007 /* SyncSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000007 /* SyncSettingsWindowController.swift */; };
+		B10000A1 /* GrowthKeyboardPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000A1 /* GrowthKeyboardPresentation.swift */; };
+		B10000A2 /* GrowthPlaybackState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000A2 /* GrowthPlaybackState.swift */; };
+		B10000A3 /* EditorialKeyboardRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000A3 /* EditorialKeyboardRenderer.swift */; };
+		B10000A4 /* GrowthKeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000A4 /* GrowthKeyboardViewController.swift */; };
+		B10000A5 /* KeyboardVisualizationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000A5 /* KeyboardVisualizationViewController.swift */; };
+		B10000A6 /* AppLaunchMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000A6 /* AppLaunchMode.swift */; };
+		B10000A7 /* GrowthKeyboard3DGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000A7 /* GrowthKeyboard3DGeometry.swift */; };
+		B10000A8 /* GrowthKeyboard3DScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000A8 /* GrowthKeyboard3DScene.swift */; };
+		B10000A9 /* GrowthKeyboard3DRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000A9 /* GrowthKeyboard3DRenderer.swift */; };
+		D10000B1 /* MechanicalKeyboardScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000B1 /* MechanicalKeyboardScene.swift */; };
+		D10000B2 /* MechanicalKeyboardGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000B2 /* MechanicalKeyboardGeometry.swift */; };
+		D10000B3 /* MechanicalKeyboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000B3 /* MechanicalKeyboardView.swift */; };
+		D10000B4 /* MechanicalKeyboardWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000B4 /* MechanicalKeyboardWindowController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -149,6 +162,19 @@
 		B2000005 /* DisplayStatsAggregator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayStatsAggregator.swift; sourceTree = "<group>"; };
 		B2000006 /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
 		B2000007 /* SyncSettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSettingsWindowController.swift; sourceTree = "<group>"; };
+		B20000A1 /* GrowthKeyboardPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowthKeyboardPresentation.swift; sourceTree = "<group>"; };
+		B20000A2 /* GrowthPlaybackState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowthPlaybackState.swift; sourceTree = "<group>"; };
+		B20000A3 /* EditorialKeyboardRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorialKeyboardRenderer.swift; sourceTree = "<group>"; };
+		B20000A4 /* GrowthKeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowthKeyboardViewController.swift; sourceTree = "<group>"; };
+		B20000A5 /* KeyboardVisualizationViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardVisualizationViewController.swift; sourceTree = "<group>"; };
+		B20000A6 /* AppLaunchMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLaunchMode.swift; sourceTree = "<group>"; };
+		B20000A7 /* GrowthKeyboard3DGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowthKeyboard3DGeometry.swift; sourceTree = "<group>"; };
+		B20000A8 /* GrowthKeyboard3DScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowthKeyboard3DScene.swift; sourceTree = "<group>"; };
+		B20000A9 /* GrowthKeyboard3DRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrowthKeyboard3DRenderer.swift; sourceTree = "<group>"; };
+		D20000B1 /* MechanicalKeyboardScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MechanicalKeyboardScene.swift; sourceTree = "<group>"; };
+		D20000B2 /* MechanicalKeyboardGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MechanicalKeyboardGeometry.swift; sourceTree = "<group>"; };
+		D20000B3 /* MechanicalKeyboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MechanicalKeyboardView.swift; sourceTree = "<group>"; };
+		D20000B4 /* MechanicalKeyboardWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MechanicalKeyboardWindowController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -202,6 +228,14 @@
 			children = (
 				B5000001 /* Sync */,
 				A2000001 /* AppDelegate.swift */,
+				D20000B4 /* MechanicalKeyboardWindowController.swift */,
+				D20000B3 /* MechanicalKeyboardView.swift */,
+				D20000B2 /* MechanicalKeyboardGeometry.swift */,
+				D20000B1 /* MechanicalKeyboardScene.swift */,
+				B20000A6 /* AppLaunchMode.swift */,
+				B20000A9 /* GrowthKeyboard3DRenderer.swift */,
+				B20000A8 /* GrowthKeyboard3DScene.swift */,
+				B20000A7 /* GrowthKeyboard3DGeometry.swift */,
 				A2000035 /* AnalyticsManager.swift */,
 				A2000023 /* AppActivityTracker.swift */,
 				A2000003 /* StatsManager.swift */,
@@ -216,6 +250,11 @@
 				B2000099 /* CumulativeKeyboardSnapshot.swift */,
 				B200009A /* KeyboardTrackingPeriod.swift */,
 				B200009B /* KeyboardUsageProgress.swift */,
+				B20000A5 /* KeyboardVisualizationViewController.swift */,
+				B20000A4 /* GrowthKeyboardViewController.swift */,
+				B20000A3 /* EditorialKeyboardRenderer.swift */,
+				B20000A2 /* GrowthPlaybackState.swift */,
+				B20000A1 /* GrowthKeyboardPresentation.swift */,
 				B2000094 /* AppDetailView.swift */,
 				B2000092 /* AppKeyBreakdown.swift */,
 				9A20000A /* HelperSupervisor.swift */,
@@ -408,6 +447,14 @@
 				B1000006 /* SyncCoordinator.swift in Sources */,
 				B1000007 /* SyncSettingsWindowController.swift in Sources */,
 				A1000001 /* AppDelegate.swift in Sources */,
+				D10000B4 /* MechanicalKeyboardWindowController.swift in Sources */,
+				D10000B3 /* MechanicalKeyboardView.swift in Sources */,
+				D10000B2 /* MechanicalKeyboardGeometry.swift in Sources */,
+				D10000B1 /* MechanicalKeyboardScene.swift in Sources */,
+				B10000A6 /* AppLaunchMode.swift in Sources */,
+				B10000A9 /* GrowthKeyboard3DRenderer.swift in Sources */,
+				B10000A8 /* GrowthKeyboard3DScene.swift in Sources */,
+				B10000A7 /* GrowthKeyboard3DGeometry.swift in Sources */,
 				A1000035 /* AnalyticsManager.swift in Sources */,
 				9A10000A /* HelperSupervisor.swift in Sources */,
 				9A10000B /* HelperXPCClient.swift in Sources */,
@@ -426,6 +473,11 @@
 				B1000099 /* CumulativeKeyboardSnapshot.swift in Sources */,
 				B100009A /* KeyboardTrackingPeriod.swift in Sources */,
 				B100009B /* KeyboardUsageProgress.swift in Sources */,
+				B10000A5 /* KeyboardVisualizationViewController.swift in Sources */,
+				B10000A4 /* GrowthKeyboardViewController.swift in Sources */,
+				B10000A3 /* EditorialKeyboardRenderer.swift in Sources */,
+				B10000A2 /* GrowthPlaybackState.swift in Sources */,
+				B10000A1 /* GrowthKeyboardPresentation.swift in Sources */,
 				B1000094 /* AppDetailView.swift in Sources */,
 				B1000092 /* AppKeyBreakdown.swift in Sources */,
 				A1000032 /* StatsModels.swift in Sources */,

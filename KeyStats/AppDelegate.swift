@@ -32,12 +32,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 初始化菜单栏控制器
         menuBarController = MenuBarController()
         applyAppIcon()
-        _ = UpdateManager.shared
+        if AppLaunchMode.current == .normal {
+            _ = UpdateManager.shared
+        }
         SyncCoordinator.shared.start()
 
+        setupApplicationMenu()
         setupWindowMenu()
 
         bootstrapHelperPipeline(wasPreviouslyInstalled: wasPreviouslyInstalled)
+        #if DEBUG
+        if AppLaunchMode.current == .guiAcceptance,
+           ProcessInfo.processInfo.arguments.contains("--debug-open-keyboard") {
+            DispatchQueue.main.async { KeyboardHeatmapWindowController.shared.show() }
+        }
+        if AppLaunchMode.current == .guiAcceptance,
+           ProcessInfo.processInfo.arguments.contains("--debug-open-statistics") {
+            DispatchQueue.main.async { [weak self] in self?.menuBarController?.presentForGUIAcceptance() }
+        }
+        #endif
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -56,6 +69,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func bootstrapHelperPipeline(wasPreviouslyInstalled: Bool) {
         HelperXPCClient.shared.setEventSink(RemoteEventProcessor.shared)
+        if AppLaunchMode.current == .guiAcceptance {
+            NSLog("[GUI Acceptance] Using installed Helper only; installation, LaunchAgent management and permission migration are disabled")
+            connectHelperAndStart()
+            return
+        }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             do {
                 try HelperSupervisor.shared.ensureInstalled()
@@ -78,13 +96,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self = self else { return }
                 NSLog("[AppDelegate] helper xpc state = \(state)")
                 switch state {
-                case .connected(_, let granted):
+                case .connected(let version, let granted):
+                    guard AppLaunchMode.current.allowsHelperVersion(version, expected: HelperLocations.interfaceVersion) else {
+                        NSLog("[GUI Acceptance] Helper protocol mismatch (installed=%d expected=%d); monitoring disabled, Helper left unchanged", version, HelperLocations.interfaceVersion)
+                        HelperXPCClient.shared.disconnect()
+                        return
+                    }
                     if granted {
                         HelperXPCClient.shared.startMonitoring { ok, code in
                             NSLog("[AppDelegate] helper startMonitoring ok=\(ok) code=\(code)")
                         }
                         self.promptLaunchAtLoginIfNeeded()
                     } else {
+                        guard AppLaunchMode.current == .normal else {
+                            NSLog("[GUI Acceptance] Installed Helper lacks Accessibility permission; GUI remains available without monitoring or permission changes")
+                            return
+                        }
                         if self.shouldShowAccessibilityPromptOnLaunch {
                             self.showPermissionAlert()
                         } else {
@@ -93,6 +120,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         self.startPermissionPolling()
                     }
                 case .disconnected(let reason):
+                    guard AppLaunchMode.current == .normal else {
+                        NSLog("[GUI Acceptance] Installed Helper unavailable: %@; no install or reconnect attempted", reason)
+                        return
+                    }
                     NSLog("[AppDelegate] helper disconnected: \(reason); retry in 5s")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
                         self?.connectHelperAndStart()
@@ -112,6 +143,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func requestAccessibilityPermission(analyticsSource: String) {
+        guard AppLaunchMode.current == .normal else {
+            NSLog("[GUI Acceptance] Accessibility requests are disabled")
+            return
+        }
         if isHelperAccessibilityGranted() {
             handleAccessibilityPermissionGranted()
             return
@@ -209,6 +244,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func promptLaunchAtLoginIfNeeded() {
+        guard AppLaunchMode.current == .normal else { return }
         guard isHelperAccessibilityGranted() else { return }
         let defaults = UserDefaults.standard
         guard !defaults.bool(forKey: launchAtLoginPromptedKey) else { return }
@@ -261,6 +297,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         NSApp.applicationIconImage = appIcon
+    }
+
+    private func setupApplicationMenu() {
+        guard let menu = NSApp.mainMenu?.items.first?.submenu else { return }
+        if let about = menu.items.first(where: { $0.action == #selector(NSApplication.orderFrontStandardAboutPanel(_:)) }) {
+            about.title = NSLocalizedString("menu.about", comment: "")
+            about.target = self
+            about.action = #selector(showProjectAbout)
+        }
+        menu.items.first(where: { $0.action == #selector(NSApplication.terminate(_:)) })?.title =
+            NSLocalizedString("menu.quitApp", comment: "")
+    }
+
+    @objc private func showProjectAbout() {
+        let credits = NSMutableAttributedString(string:
+            NSLocalizedString("about.maintainer", comment: "") + " Xuan-lprk\n")
+        credits.append(NSAttributedString(string: "github.com/Xuan-lprk/KeyStatsMac",
+            attributes: [.link: URL(string: "https://github.com/Xuan-lprk/KeyStatsMac")!]))
+        credits.append(NSAttributedString(string: "\n\n" + NSLocalizedString("about.upstreamCredit", comment: "")))
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationName: Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "KeyStatsMac",
+            .credits: credits
+        ])
     }
 
     private func setupWindowMenu() {

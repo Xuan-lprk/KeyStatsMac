@@ -39,12 +39,14 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>SUFeedURL</key>
-	<string>https://github.com/debugtheworldbot/keyStats/releases/latest/download/appcast.xml</string>
+	<string>https://github.com/Xuan-lprk/KeyStatsMac/releases/latest/download/appcast.xml</string>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
+	<key>SUPublicEDKey</key>
+	<string>jee406Q231+63eFZLOW7CRfDaIpxvHag+nsjlEZJB60=</string>
+	<key>KeyStatsInAppUpdatesEnabled</key>
+	<false/>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
-	<key>SUPublicEDKey</key>
-	<string>3GDkFkOpTBszdxr1xvLI2JGGyAkktDepZAKDxS0vmr0=</string>
 </dict>
 </plist>

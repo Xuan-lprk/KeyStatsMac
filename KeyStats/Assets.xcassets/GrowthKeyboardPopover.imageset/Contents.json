@@ -1,0 +1,40 @@
+{
+  "images": [
+    {
+      "filename": "mechanical-closeup-light.png",
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "mechanical-closeup-light@2x.png",
+      "idiom": "universal",
+      "scale": "2x"
+    },
+    {
+      "filename": "mechanical-closeup-dark.png",
+      "idiom": "universal",
+      "scale": "1x",
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ]
+    },
+    {
+      "filename": "mechanical-closeup-dark@2x.png",
+      "idiom": "universal",
+      "scale": "2x",
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ]
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

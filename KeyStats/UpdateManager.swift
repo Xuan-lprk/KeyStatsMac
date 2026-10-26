@@ -1,4 +1,4 @@
-import Foundation
+import Cocoa
 import Sparkle
 
 /// Manages Sparkle update checks and lifecycle.
@@ -17,9 +17,22 @@ final class UpdateManager: NSObject {
     private var updateCheckCoordinator = UpdateCheckCoordinator()
     private(set) var hasAvailableUpdate = false
     private(set) var canCheckForUpdates = false
+    var hasConfiguredSigningKey: Bool {
+        AppLaunchMode.normal.allowsUpdater(publicKey: Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String,
+                                          updatesEnabled: true)
+    }
+    var usesManualReleasePage: Bool {
+        !hasConfiguredSigningKey || Bundle.main.object(forInfoDictionaryKey: "KeyStatsInAppUpdatesEnabled") as? Bool != true
+    }
+    private var allowsSparkle: Bool {
+        AppLaunchMode.current == .normal && !usesManualReleasePage
+    }
 
     private override init() {
         super.init()
+        // The popover also accesses this singleton. Keep the lazy Sparkle controller
+        // uninitialized throughout acceptance, including manual update actions.
+        guard allowsSparkle else { return }
         registerSparkleObservers()
         observeCanCheckForUpdates()
         probeForUpdateAvailability()
@@ -28,6 +41,13 @@ final class UpdateManager: NSObject {
     // MARK: - Updates
 
     func checkForUpdates() {
+        guard AppLaunchMode.current == .normal else { return }
+        guard !usesManualReleasePage else {
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(URL(string: "https://github.com/Xuan-lprk/KeyStatsMac/releases")!)
+            }
+            return
+        }
         if Thread.isMainThread {
             requestForegroundUpdateCheck()
         } else {
@@ -38,6 +58,7 @@ final class UpdateManager: NSObject {
     }
 
     func probeForUpdateAvailability() {
+        guard allowsSparkle else { return }
         let probe = { [weak self] in
             guard let self = self else { return }
             let updater = self.updaterController.updater
@@ -112,6 +133,7 @@ final class UpdateManager: NSObject {
     }
 
     private func requestForegroundUpdateCheck() {
+        guard allowsSparkle else { return }
         let updater = updaterController.updater
         setCanCheckForUpdates(updater.canCheckForUpdates, startsPendingCheck: false)
 

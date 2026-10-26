@@ -65,6 +65,14 @@ class MenuBarController {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
+        let mechanicalKeyboardItem = NSMenuItem(
+            title: NSLocalizedString("keyboardVisualization.entry", comment: ""),
+            action: #selector(openMechanicalKeyboard),
+            keyEquivalent: ""
+        )
+        mechanicalKeyboardItem.target = self
+        menu.addItem(mechanicalKeyboardItem)
+
         menu.addItem(.separator())
 
         let quitItem = NSMenuItem(
@@ -124,6 +132,11 @@ class MenuBarController {
         SettingsWindowController.shared.show()
     }
 
+    @objc private func openMechanicalKeyboard() {
+        AppDelegate.trackClick("context_menu_mechanical_keyboard")
+        KeyboardHeatmapWindowController.shared.show()
+    }
+
     @objc private func quitApp() {
         NSApp.terminate(nil)
     }
@@ -154,6 +167,21 @@ class MenuBarController {
     private func closePopover() {
         popover.performClose(nil)
     }
+
+    #if DEBUG
+    func presentForGUIAcceptance() {
+        guard AppLaunchMode.current == .guiAcceptance else { return }
+        // The status item's window is attached after applicationDidFinishLaunching.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self else { return }
+            self.showPopover()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                guard let self else { return }
+                NSLog("[GUI Acceptance] Statistics popover shown=\(self.popover.isShown) size=\(self.popover.contentSize) anchorVisible=\(self.statusItem.view?.window?.isVisible ?? false)")
+            }
+        }
+    }
+    #endif
 
     private func scheduleMenuBarUpdate() {
         guard Thread.isMainThread else {
