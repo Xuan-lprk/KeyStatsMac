@@ -18,6 +18,10 @@
 		A1000003 /* StatsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003 /* StatsManager.swift */; };
 		A1000004 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000004 /* MenuBarController.swift */; };
 		A1000005 /* StatsPopoverViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* StatsPopoverViewController.swift */; };
+		E10000P1 /* TypingPulseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000P1 /* TypingPulseView.swift */; };
+		E10000P4 /* MenuUIStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000P4 /* MenuUIStyle.swift */; };
+		E10000P3 /* GeekTypingPulseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000P3 /* GeekTypingPulseView.swift */; };
+		E10000P2 /* GeekStatsPopoverViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000P2 /* GeekStatsPopoverViewController.swift */; };
 		A1000006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000006 /* Assets.xcassets */; };
 		A1000007 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A2000007 /* Main.storyboard */; };
 		A1000008 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008 /* MainWindowController.swift */; };
@@ -112,6 +116,10 @@
 		A2000003 /* StatsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsManager.swift; sourceTree = "<group>"; };
 		A2000004 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A2000005 /* StatsPopoverViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsPopoverViewController.swift; sourceTree = "<group>"; };
+		E20000P1 /* TypingPulseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingPulseView.swift; sourceTree = "<group>"; };
+		E20000P4 /* MenuUIStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuUIStyle.swift; sourceTree = "<group>"; };
+		E20000P3 /* GeekTypingPulseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeekTypingPulseView.swift; sourceTree = "<group>"; };
+		E20000P2 /* GeekStatsPopoverViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeekStatsPopoverViewController.swift; sourceTree = "<group>"; };
 		A2000006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A2000007 /* Main.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = Main.storyboard; sourceTree = "<group>"; };
 		A2000008 /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
@@ -178,6 +186,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B80000C1 /* Standalone helper package files */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Package.swift,
+				README.md,
+				Tests/HelperContractTests.swift,
+			);
+			target = 9479D3D52F9B66190083A75E /* helper */;
+		};
 		9479D3F72F9B665D0083A75E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -191,7 +208,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		9479D3D72F9B66190083A75E /* KeyStatsHelper */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (9479D3F72F9B665D0083A75E /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = KeyStatsHelper; sourceTree = "<group>"; };
+		9479D3D72F9B66190083A75E /* KeyStatsHelper */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (9479D3F72F9B665D0083A75E /* PBXFileSystemSynchronizedBuildFileExceptionSet */, B80000C1 /* Standalone helper package files */, ); explicitFileTypes = {}; explicitFolders = (); path = KeyStatsHelper; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -265,6 +282,10 @@
 				A2000004 /* MenuBarController.swift */,
 				A2000033 /* KPSDetailView.swift */,
 				A2000005 /* StatsPopoverViewController.swift */,
+				E20000P1 /* TypingPulseView.swift */,
+				E20000P4 /* MenuUIStyle.swift */,
+				E20000P3 /* GeekTypingPulseView.swift */,
+				E20000P2 /* GeekStatsPopoverViewController.swift */,
 				A2000024 /* AppStatsWindowController.swift */,
 				A2000025 /* AppStatsViewController.swift */,
 				A2000030 /* KeyboardHeatmapWindowController.swift */,
@@ -484,6 +505,10 @@
 				A1000004 /* MenuBarController.swift in Sources */,
 				A1000033 /* KPSDetailView.swift in Sources */,
 				A1000005 /* StatsPopoverViewController.swift in Sources */,
+				E10000P1 /* TypingPulseView.swift in Sources */,
+				E10000P4 /* MenuUIStyle.swift in Sources */,
+				E10000P3 /* GeekTypingPulseView.swift in Sources */,
+				E10000P2 /* GeekStatsPopoverViewController.swift in Sources */,
 				A1000024 /* AppStatsWindowController.swift in Sources */,
 				A1000025 /* AppStatsViewController.swift in Sources */,
 				A1000008 /* MainWindowController.swift in Sources */,

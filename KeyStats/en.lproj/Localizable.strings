@@ -494,8 +494,6 @@
 "popover.hideKeys" = "Show less";
 
 "popover.growthKeyboard" = "Growth Keyboard";
-"popover.growthKeyboardSubtitle" = "Mac + Mechanical";
-"popover.growthKeyboardCTA" = "Growth & Replay";
 "popover.mouse.left" = "Left";
 "popover.mouse.middle" = "Middle";
 "popover.mouse.right" = "Right";
@@ -504,3 +502,26 @@
 "popover.mouse.movement" = "Mouse";
 "popover.mouse.scroll" = "Scroll";
 "popover.growthKeyboardHint" = "Open the interactive 3D Growth Keyboard";
+
+/* Live input pulse */
+"pulse.title" = "INPUT PULSE";
+"pulse.live" = "LIVE";
+"pulse.idleHint" = "TYPE TO LIGHT IT UP";
+"pulse.activeHint" = "EVERY KEY HAS AN ECHO";
+"pulse.accessibilityHelp" = "Live aggregate typing and click rates. No keys or input sequences are shown.";
+"pulse.accessibilityValue" = "Current rate: %1$.1f KPS, %2$.1f CPS";
+
+/* Geek menu theme */
+"geek.today" = "TODAY";
+"geek.topKeys" = "TOP KEYS";
+"geek.history" = "HISTORY";
+"geek.pulse.title" = "INPUT // PULSE";
+"geek.pulse.live" = "ONLINE";
+"geek.pulse.idleHint" = "AWAITING INPUT_";
+"geek.pulse.activeHint" = "SIGNAL LOCKED // KEEP TYPING";
+"geek.pulse.accessibilityHelp" = "Live aggregate typing and click rates in the geek console. No keys or input sequences are shown.";
+"geek.pulse.accessibilityValue" = "Current rate: %1$.1f KPS, %2$.1f CPS";
+
+"settings.uiStyle" = "Menu UI Style";
+"settings.uiStyle.standard" = "Input Pulse (Original)";
+"settings.uiStyle.geek" = "Geek (Editable Copy)";

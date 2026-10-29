@@ -31,6 +31,7 @@ final class SettingsViewController: NSViewController, NSTextFieldDelegate {
     private var headerSubtitleLabel: NSTextField!
     private var githubButton: NSButton!
 
+    private var menuUIStylePopUp: NSPopUpButton!
     private var showKeyPressesButton: NSSwitch!
     private var showMouseClicksButton: NSSwitch!
     private var minimalMenuBarModeButton: NSSwitch!
@@ -281,7 +282,16 @@ final class SettingsViewController: NSViewController, NSTextFieldDelegate {
         dynamicIconColorHelpButton.widthAnchor.constraint(equalToConstant: 14).isActive = true
         dynamicIconColorHelpButton.heightAnchor.constraint(equalToConstant: 14).isActive = true
 
+        menuUIStylePopUp = NSPopUpButton()
+        menuUIStylePopUp.addItems(withTitles: [
+            NSLocalizedString("settings.uiStyle.standard", comment: ""),
+            NSLocalizedString("settings.uiStyle.geek", comment: "")
+        ])
+        menuUIStylePopUp.target = self
+        menuUIStylePopUp.action = #selector(changeMenuUIStyle)
+        menuUIStylePopUp.setAccessibilityLabel(NSLocalizedString("settings.uiStyle", comment: ""))
         let menuBarStack = makeOptionSeparatedStack([
+            makeLabeledRow(title: NSLocalizedString("settings.uiStyle", comment: ""), control: menuUIStylePopUp),
             makeSwitchRow(titleKey: "setting.showKeyPresses", toggle: showKeyPressesButton),
             makeSwitchRow(titleKey: "setting.showMouseClicks", toggle: showMouseClicksButton),
             makeSwitchRow(titleKey: "setting.minimalMenuBarMode", toggle: minimalMenuBarModeButton)
@@ -707,7 +717,13 @@ final class SettingsViewController: NSViewController, NSTextFieldDelegate {
 
     // MARK: - State
 
+    @objc private func changeMenuUIStyle() {
+        let style = MenuUIStyle.allCases[menuUIStylePopUp.indexOfSelectedItem]
+        UserDefaults.standard.set(style.rawValue, forKey: MenuUIStyle.defaultsKey)
+    }
+
     private func updateState() {
+        menuUIStylePopUp.selectItem(at: MenuUIStyle.allCases.firstIndex(of: MenuUIStyle.current) ?? 0)
         showKeyPressesButton.state = StatsManager.shared.showKeyPressesInMenuBar ? .on : .off
         showMouseClicksButton.state = StatsManager.shared.showMouseClicksInMenuBar ? .on : .off
         minimalMenuBarModeButton.state = StatsManager.shared.minimalMenuBarMode ? .on : .off

@@ -494,8 +494,6 @@
 "popover.hideKeys" = "收起";
 
 "popover.growthKeyboard" = "成长键盘";
-"popover.growthKeyboardSubtitle" = "薄膜 · 机械";
-"popover.growthKeyboardCTA" = "成长与回放";
 "popover.mouse.left" = "左键";
 "popover.mouse.middle" = "中键";
 "popover.mouse.right" = "右键";
@@ -504,3 +502,26 @@
 "popover.mouse.movement" = "移动";
 "popover.mouse.scroll" = "滚动";
 "popover.growthKeyboardHint" = "打开可交互的 3D 成长键盘";
+
+/* 实时输入节奏 */
+"pulse.title" = "输入节奏";
+"pulse.live" = "实时";
+"pulse.idleHint" = "敲几下，点亮节奏";
+"pulse.activeHint" = "每一次敲击，都有回响";
+"pulse.accessibilityHelp" = "实时显示聚合后的键盘与鼠标速率，不显示键名或输入顺序。";
+"pulse.accessibilityValue" = "当前速率：键盘 %1$.1f KPS，点击 %2$.1f CPS";
+
+/* 极客菜单主题 */
+"geek.today" = "今日";
+"geek.topKeys" = "常用键位";
+"geek.history" = "历史趋势";
+"geek.pulse.title" = "输入 // 节奏";
+"geek.pulse.live" = "在线";
+"geek.pulse.idleHint" = "等待输入_";
+"geek.pulse.activeHint" = "信号锁定 // 继续敲击";
+"geek.pulse.accessibilityHelp" = "极客控制台实时显示聚合后的键盘与鼠标速率，不显示键名或输入顺序。";
+"geek.pulse.accessibilityValue" = "当前速率：键盘 %1$.1f KPS，点击 %2$.1f CPS";
+
+"settings.uiStyle" = "菜单 UI 风格";
+"settings.uiStyle.standard" = "Input Pulse（原版）";
+"settings.uiStyle.geek" = "极客风（独立副本）";

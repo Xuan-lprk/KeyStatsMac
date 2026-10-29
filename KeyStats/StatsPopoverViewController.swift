@@ -50,7 +50,8 @@ class StatsPopoverViewController: NSViewController {
     private var settingsButton: NSButton!
     private var appStatsButton: NSButton!
     private var allTimeStatsButton: NSButton!
-    private var growthKeyboardEntry: GrowthKeyboardEntryView!
+    private var keyboardHeatmapButton: NSButton!
+    private var pulseView: TypingPulseView!
     private var pendingStatsRefresh = false
     private var statsUpdateToken: UUID?
     private var updateAvailabilityToken: UUID?
@@ -120,6 +121,7 @@ class StatsPopoverViewController: NSViewController {
 
     override func viewWillAppear() {
         super.viewWillAppear()
+        pulseView.start()
         updateStats()
         startLiveUpdates()
         startUpdateAvailabilityUpdates()
@@ -139,7 +141,7 @@ class StatsPopoverViewController: NSViewController {
         stopUpdateAvailabilityUpdates()
         stopKPSRefreshTimer()
         closeKPSPopover()
-        growthKeyboardEntry.resetHover()
+        pulseView.stop()
     }
 
     override func viewDidLayout() {
@@ -229,11 +231,9 @@ class StatsPopoverViewController: NSViewController {
         statsStackView.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(statsStackView)
 
-        growthKeyboardEntry = GrowthKeyboardEntryView()
-        growthKeyboardEntry.target = self
-        growthKeyboardEntry.action = #selector(showKeyboardHeatmap)
-        growthKeyboardEntry.translatesAutoresizingMaskIntoConstraints = false
-        containerView.addSubview(growthKeyboardEntry)
+        pulseView = TypingPulseView()
+        pulseView.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(pulseView)
 
         func makePointerRow(_ views: [StatItemView]) -> NSStackView {
             let row = NSStackView(views: views)
@@ -268,6 +268,20 @@ class StatsPopoverViewController: NSViewController {
         keyBreakdownTitleLabel.textColor = .labelColor
         keyBreakdownTitleLabel.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
         containerView.addSubview(keyBreakdownTitleLabel)
+
+        keyboardHeatmapButton = NSButton(title: NSLocalizedString("popover.growthKeyboard", comment: ""), target: self, action: #selector(showKeyboardHeatmap))
+        keyboardHeatmapButton.bezelStyle = .recessed
+        keyboardHeatmapButton.showsBorderOnlyWhileMouseInside = true
+        keyboardHeatmapButton.controlSize = .small
+        keyboardHeatmapButton.font = .systemFont(ofSize: 11, weight: .medium)
+        keyboardHeatmapButton.contentTintColor = .controlAccentColor
+        keyboardHeatmapButton.toolTip = NSLocalizedString("keyboardVisualization.title", comment: "")
+        keyboardHeatmapButton.setAccessibilityLabel(NSLocalizedString("popover.growthKeyboardHint", comment: ""))
+        keyboardHeatmapButton.translatesAutoresizingMaskIntoConstraints = false
+        keyboardHeatmapButton.setContentHuggingPriority(.required, for: .horizontal)
+        keyboardHeatmapButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+        containerView.addSubview(keyboardHeatmapButton)
+        keyBreakdownTitleLabel.heightAnchor.constraint(greaterThanOrEqualTo: keyboardHeatmapButton.heightAnchor).isActive = true
 
         // 五列、按行排名；少量键位也保持同一格宽。
         keyBreakdownArea = NSView()
@@ -489,13 +503,13 @@ class StatsPopoverViewController: NSViewController {
         containerView.addSubview(footerStack)
         
         NSLayoutConstraint.activate([
-            growthKeyboardEntry.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
-            growthKeyboardEntry.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
-            growthKeyboardEntry.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            growthKeyboardEntry.heightAnchor.constraint(equalToConstant: 92),
+            pulseView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
+            pulseView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
+            pulseView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
+            pulseView.heightAnchor.constraint(equalToConstant: 132),
 
             titleLabel.heightAnchor.constraint(greaterThanOrEqualTo: todayActions.heightAnchor),
-            titleLabel.topAnchor.constraint(equalTo: growthKeyboardEntry.bottomAnchor, constant: 12),
+            titleLabel.topAnchor.constraint(equalTo: pulseView.bottomAnchor, constant: 12),
             titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
             todayActions.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
             todayActions.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
@@ -507,6 +521,9 @@ class StatsPopoverViewController: NSViewController {
 
             keyBreakdownTitleLabel.topAnchor.constraint(equalTo: statsStackView.bottomAnchor, constant: 12),
             keyBreakdownTitleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
+            keyboardHeatmapButton.centerYAnchor.constraint(equalTo: keyBreakdownTitleLabel.centerYAnchor),
+            keyboardHeatmapButton.leadingAnchor.constraint(greaterThanOrEqualTo: keyBreakdownTitleLabel.trailingAnchor, constant: 8),
+            keyboardHeatmapButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
             keyBreakdownArea.topAnchor.constraint(equalTo: keyBreakdownTitleLabel.bottomAnchor, constant: 8),
             keyBreakdownArea.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 18),
             keyBreakdownArea.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -18),
@@ -634,10 +651,17 @@ class StatsPopoverViewController: NSViewController {
         kpsBadge.update(peakKPS: stats.peakKPS, peakCPS: stats.peakCPS)
     }
 
+    private func refreshLiveRates() {
+        updateKPSBadge()
+        let rates = StatsManager.shared.currentRatesSnapshot()
+        pulseView.append(currentKPS: rates.currentKPS, currentCPS: rates.currentCPS)
+    }
+
     private func startKPSRefreshTimer() {
         kpsRefreshTimer?.invalidate()
+        refreshLiveRates()
         kpsRefreshTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            self?.updateKPSBadge()
+            self?.refreshLiveRates()
         }
         if let timer = kpsRefreshTimer {
             RunLoop.main.add(timer, forMode: .common)
@@ -708,6 +732,7 @@ class StatsPopoverViewController: NSViewController {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.updateStats()
+            self.pulseView.emitImpulse()
             self.pendingStatsRefresh = false
         }
     }
@@ -836,7 +861,9 @@ class StatsPopoverViewController: NSViewController {
         if !permissionButton.isHidden {
             view.window?.makeFirstResponder(permissionButton)
         } else {
-            view.window?.makeFirstResponder(growthKeyboardEntry)
+            // Start without a focused button so typing Space into Input Pulse
+            // does not activate the Growth Keyboard entry.
+            view.window?.makeFirstResponder(nil)
         }
     }
     
@@ -991,10 +1018,10 @@ class StatsPopoverViewController: NSViewController {
             checkUpdatesButton.isHidden ? 0 : checkUpdatesButton.fittingSize.height
         )
 
-        let keyBreakdownHeaderHeight = keyBreakdownTitleLabel.fittingSize.height
+        let keyBreakdownHeaderHeight = max(keyBreakdownTitleLabel.fittingSize.height, keyboardHeatmapButton.fittingSize.height)
 
         let computedHeight =
-            8 + 92 + 12 + titleRowHeight +
+            8 + 132 + 12 + titleRowHeight +
             2 + statsRowsHeight + statsSpacing +
             12 + keyBreakdownHeaderHeight + 8 + keyBreakdownGridHeight +
             14 + historyTitleLabel.fittingSize.height +
@@ -1077,143 +1104,6 @@ struct AnimatedKeyCountView: View {
         .lineLimit(1)
         .minimumScaleFactor(0.75)
         .animation(.default, value: viewModel.text)
-    }
-}
-
-// MARK: - 静态 3D 成长键盘入口
-
-final class GrowthKeyboardEntryView: NSButton {
-    private let previewImageView = NSImageView()
-    private let chevronView = NSImageView()
-    private let ctaLabel = NSTextField(labelWithString: NSLocalizedString("popover.growthKeyboardCTA", comment: ""))
-    private var trackingAreaForHover: NSTrackingArea?
-    private var accessibilityObserver: NSObjectProtocol?
-    private var isHovered = false
-
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        title = ""
-        isBordered = false
-        refusesFirstResponder = false
-        focusRingType = .exterior
-        wantsLayer = true
-        layer?.cornerRadius = 10
-        layer?.masksToBounds = true
-        toolTip = NSLocalizedString("keyboardVisualization.title", comment: "")
-        setAccessibilityLabel(NSLocalizedString("popover.growthKeyboard", comment: ""))
-        setAccessibilityHelp(NSLocalizedString("popover.growthKeyboardHint", comment: ""))
-
-        previewImageView.image = NSImage(named: "GrowthKeyboardPopover")
-        previewImageView.imageScaling = .scaleProportionallyUpOrDown
-        previewImageView.wantsLayer = true
-        previewImageView.translatesAutoresizingMaskIntoConstraints = false
-        previewImageView.setAccessibilityElement(false)
-        addSubview(previewImageView)
-
-        let titleLabel = NSTextField(labelWithString: NSLocalizedString("popover.growthKeyboard", comment: ""))
-        titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
-        titleLabel.textColor = .labelColor
-        let subtitleLabel = NSTextField(labelWithString: NSLocalizedString("popover.growthKeyboardSubtitle", comment: ""))
-        subtitleLabel.font = .systemFont(ofSize: 10.5, weight: .regular)
-        subtitleLabel.textColor = .secondaryLabelColor
-        ctaLabel.font = .systemFont(ofSize: 11, weight: .medium)
-        chevronView.image = NSImage(systemSymbolName: "arrow.right", accessibilityDescription: nil)
-        chevronView.symbolConfiguration = .init(pointSize: 11, weight: .medium)
-        chevronView.wantsLayer = true
-        chevronView.setAccessibilityElement(false)
-        let cta = NSStackView(views: [ctaLabel, chevronView])
-        cta.spacing = 4
-        cta.alignment = .centerY
-        let labels = NSStackView(views: [titleLabel, subtitleLabel, cta])
-        labels.orientation = .vertical
-        labels.alignment = .leading
-        labels.spacing = 4
-        labels.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(labels)
-        for label in [titleLabel, subtitleLabel, ctaLabel] {
-            label.setAccessibilityElement(false)
-        }
-        NSLayoutConstraint.activate([
-            previewImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            previewImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            previewImageView.topAnchor.constraint(equalTo: topAnchor),
-            previewImageView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            labels.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
-            labels.centerYAnchor.constraint(equalTo: centerYAnchor),
-            labels.widthAnchor.constraint(lessThanOrEqualToConstant: 144),
-            chevronView.widthAnchor.constraint(equalToConstant: 12),
-            chevronView.heightAnchor.constraint(equalToConstant: 14)
-        ])
-        accessibilityObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.updateHoverPresentation() }
-        updateHoverPresentation()
-    }
-
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    deinit {
-        if let accessibilityObserver { NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver) }
-    }
-    override var acceptsFirstResponder: Bool { true }
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        super.hitTest(point) == nil ? nil : self
-    }
-    override var focusRingMaskBounds: NSRect { bounds }
-    override func drawFocusRingMask() {
-        NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10).fill()
-    }
-    override func keyDown(with event: NSEvent) {
-        if isEnabled && [36, 49, 76].contains(event.keyCode) { performClick(nil) }
-        else { super.keyDown(with: event) }
-    }
-    override func updateTrackingAreas() {
-        if let trackingAreaForHover { removeTrackingArea(trackingAreaForHover) }
-        trackingAreaForHover = NSTrackingArea(rect: bounds,
-            options: [.activeInKeyWindow, .mouseEnteredAndExited, .inVisibleRect], owner: self, userInfo: nil)
-        addTrackingArea(trackingAreaForHover!)
-        super.updateTrackingAreas()
-    }
-    override func mouseEntered(with event: NSEvent) {
-        isHovered = true
-        updateHoverPresentation()
-    }
-    override func mouseExited(with event: NSEvent) { resetHover() }
-    func resetHover() {
-        isHovered = false
-        updateHoverPresentation()
-    }
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        if window == nil { resetHover() }
-    }
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        updateHoverPresentation()
-    }
-    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
-    private func updateHoverPresentation() {
-        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        let color = isHovered ? NSColor.controlAccentColor : NSColor.controlAccentColor.withAlphaComponent(0.8)
-        ctaLabel.textColor = color
-        chevronView.contentTintColor = color
-        let moves = isHovered && !reduceMotion
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        previewImageView.layer?.removeAnimation(forKey: "entryHover")
-        chevronView.layer?.removeAnimation(forKey: "entryHover")
-        for (view, transform) in [(previewImageView, CATransform3DMakeTranslation(0, moves ? 2 : 0, 0)),
-                                  (chevronView, CATransform3DMakeTranslation(moves ? 2 : 0, 0, 0))] {
-            if moves {
-                let animation = CABasicAnimation(keyPath: "transform")
-                animation.fromValue = NSValue(caTransform3D: view.layer?.presentation()?.transform ?? view.layer?.transform ?? CATransform3DIdentity)
-                animation.toValue = NSValue(caTransform3D: transform)
-                animation.duration = 0.14
-                animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                view.layer?.add(animation, forKey: "entryHover")
-            }
-            view.layer?.transform = transform
-        }
-        CATransaction.commit()
     }
 }
 

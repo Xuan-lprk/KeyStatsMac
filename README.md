@@ -9,7 +9,7 @@ KeyStatsMac 不是 keylogger：它不记录输入文本、按键顺序、鼠标�
 - 键盘总量、每键累计和组合键统计。
 - 鼠标点击、移动距离和滚动距离。
 - KPS / CPS、每日历史和长期汇总。
-- 菜单栏统计面板：顶部静态机械键帽特写提供成长键盘入口，下面默认展示今日总量、最多 15 个常用键的五列阵列、7/30 天趋势及全宽鼠标明细。深浅色素材独立预渲染，Popover 不创建运行时 3D 渲染器，仅显示期间订阅统计并刷新速率。**当前整体视觉未获用户认可，开发已暂停，此实现作为交接分析快照保留。**
+- 菜单栏统计面板：顶部实验性 Input Pulse 用双层波形展示实时 KPS／CPS，并在聚合输入更新时触发有界键帽光点；仅显示期间采样，约 12 秒速率历史只存内存，关闭即清理，不记录键名或输入顺序。下方保留今日总量、最多 15 个常用键、7/30 天趋势及鼠标明细，成长键盘改为轻量文字入口。该候选尚未进行视觉、构建和性能验收。
 - 分应用聚合统计与键位分布。
 - App Detail 中的 Heatmap / 完整 Key Breakdown。
 - 正式 77 键 Growth Keyboard：Mac / 机械 3D 模型，共享 Usage 配色、Today / 历史日期、Day N、时间轴和精确键位次数；Editorial 2.5D 实现保留。
@@ -53,6 +53,7 @@ Debug 只有显式传入 `--debug-gui-acceptance` 才启用 GUI 验收模式；R
 
 - [`PROJECT.md`](PROJECT.md)：当前产品状态、与 upstream 的差异和阶段性技术决策。
 - [`AGENTS.md`](AGENTS.md)：面向 AI coding agent 的开发约束。
+- [`KeyStatsHelper/README.md`](KeyStatsHelper/README.md)：独立原生 Helper 包的构建／测试、正式 XPC 与权限边界，以及 c3502 聚合统计接入可行性。
 - [`docs/README.md`](docs/README.md)：技术文档索引及状态说明。
 - [`Prototypes/KeyboardAtelier/README.md`](Prototypes/KeyboardAtelier/README.md)：已提交的旧 Porcelain 原型。其他本地实验状态见 PROJECT，不属于本轮提交。
 - [`KeyStats.Windows/README.md`](KeyStats.Windows/README.md)：仓库中保留的 Windows 版本说明。

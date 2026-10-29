@@ -2,6 +2,64 @@
 
 本文记录当前实现、验收边界与提交范围。开发约束见 [AGENTS.md](AGENTS.md)，技术资料入口见 [docs/README.md](docs/README.md)。历史实验保留，但不能覆盖本节的当前结论。
 
+## 2026-10-29：Input Pulse 与主题切换提交交接
+
+用户已明确授权提交并普通推送当前开发状态。本次范围包含 Input Pulse、原版／极客菜单切换、极客初始化崩溃修复，以及此前未提交的 Helper 独立构建包、契约测试和对应文档；旧顶部 3D 素材按 Input Pulse 实现删除。未跟踪历史 Prototypes 和本地 build／QA 产物排除并保留本地。历史段落中的“未 commit／push”仅表示当时状态，当前以 Git 记录为准。
+
+最新正式 Debug 构建、225 项核心 XCTest 和中英文隔离极客预览通过；完整正式风格切换、真实输入、VoiceOver 和能耗验收仍未完成。此次为开发快照，不创建 tag、release 或部署。
+
+## 2026-10-29：极客主题隔离预览启动崩溃修复
+
+用户要求保留极客主题并排查隔离预览启动崩溃。崩溃报告 `GeekPreview-2026-10-29-225654.ips` 显示 `loadView → appearance callback → updateAppearance → view → loadView` 的递归，最终栈保护区 EXC_BAD_ACCESS。`loadView` 在赋值 self.view 之前设置深色 appearance，可同步触发回调；现仅在 `updateAppearance` 增加 `isViewLoaded` 和 chartView 初始化检查，避免重新加载和访问未创建的控件，保留主题造型代码。
+
+正式 Debug 构建与 225 项核心测试通过。复用同源隔离预览和隔离统计替身，中英文均成功显示窗口并正常退出，15 键、全部区域边界和图表控件往返切换检查通过，示例尺寸为 384×666pt。证据位于 `build/GeekMenuStyle/qa-fix-*.log`、`layout-en.json`、`layout-zh-Hans.json`、`geek-*.png`；预览为合成数据，不代表真实用户统计或视觉验收。预览编译一度遭遇两套 Xcode 的编译器／模块版本不一致，根模块重建完成后统一使用 Xcode-beta 工具链成功复测。
+
+仅此启动崩溃已定位修复；正式 App 的完整风格切换、真实输入、VoiceOver、能耗和用户视觉认可仍待验收。没有启动正式主 App 或改 Helper／权限，未 commit／push。
+
+## 2026-10-29：菜单 UI 风格切换与极客风独立副本（初始复制记录）
+
+按用户要求保留当前 Input Pulse 菜单，并复制独立的 `GeekStatsPopoverViewController`／`GeekTypingPulseView` 供 Kimi 设计第二套。设置的菜单栏区域新增「菜单 UI 风格」：默认原版，极客风当前外观与原版相同；选择保存到新 key `menuUIStyle.v1`，下次打开菜单应用，未知值回退原版。仅菜单面板切换，不涉及整个 App 或 Keyboard 窗口主题。
+
+MenuBarController 按需创建每套控制器、最多缓存两个，非当前风格的尺寸回调不修改当前面板。副本的辅助类型均用 Geek 前缀隔离，沿用原有订阅／timer 生命周期；生产源码注册 Xcode target、排除 SwiftPM App-only 文件，设置文案同步三语。交接边界见 [菜单 UI 风格说明](docs/menu-ui-styles.md)。本次不设计极客风、不改采集／统计，未 commit／push。
+
+验证：Debug BUILD SUCCEEDED，225 项核心 XCTest 通过，三语资源 lint／diff 检查通过；类型重命名归一化后，两份极客风源码与当前原版逐字相同。核心测试不覆盖 App-only 设置与菜单视图，实际设置切换／焦点及视觉待试用。日志为 `build/InputPulseVerification/style-build.log`、`style-tests.log`。
+
+## 2026-10-29：Input Pulse 编译验证
+
+后续修复空格误开 3D Keyboard：菜单出现时不再自动聚焦 Growth 按钮，避免 Input Pulse 试打中的 Space 激活原生按钮；鼠标入口和主动 Tab 导航保留。Debug 构建及 225 项核心测试通过，实际空格交互待用户确认。日志为 `build/InputPulseVerification/space-fix-build.log`、`space-fix-tests.log`。
+
+按用户要求编译 Kimi 的 Input Pulse。首次构建发现 `TypingPulseView.smoothPath` 使用了仅 macOS 14+ 可用的 `NSBezierPath.cgPath`，与项目最低 macOS 13 不兼容；已用 `CGMutablePath` 直接生成同样的贝塞尔控制点和闭合路径，没有调整视觉参数或交互设计。
+
+修正后正式 Debug **BUILD SUCCEEDED**，完整核心 **225 项 XCTest、0 failures**，三语资源／pbxproj lint 与 diff 检查通过。SwiftPM 核心测试不编译这个 App-only 视图，不能把它们视为 Input Pulse 的实际运行验收。本轮没有启动 App／Helper，没有验证真实输入、视觉或能耗，未 commit／push。
+
+构建与测试日志位于 `build/InputPulseVerification/`，便捷启动脚本为同目录 `Open Input Pulse.command`；脚本使用 `--debug-gui-acceptance --debug-open-statistics`，本轮只生成、没有执行。App 产物沿用 `build/HelperSeparation/BeforeDerivedData/Build/Products/Debug/KeyStats.app`，目录名不代表旧版本，最新构建日志为上述目录的 `app-build.log`。
+
+随后用户反馈“输入没反应”。只读诊断发现旧 `MechanicalFixedModel` 构建仍在运行，原 `open -a` 启动器无法保证切到新版。已将本地启动器改为通过 NSRunningApplication 正常退出已有主 App，等待退出成功才打开指定的新构建；超时则取消，不并行启动两份 App。按本次修复范围已实际切换到新版验收实例，运行日志确认 Helper version 1、Accessibility granted、startMonitoring 成功、统计菜单显示成功（384×649pt）。没有安装 Helper 或改权限，真实按键与波形的对应反馈仍待用户确认。日志为同目录 `app-runtime.log`，启动器源码为 `LaunchInputPulse.swift`，均仅保留本地。
+
+## 2026-10-28：Input Pulse 菜单实验，历史实施记录
+
+用户明确希望在菜单里增加好玩、炫酷的实时元素，并要求本轮不要编译、检查或启动，交由 Codex 继续验证。本轮将此前未通过视觉验收的顶部 3D 键帽特写及 `GrowthKeyboardPopover` 资源移除，改为 **Input Pulse**：青色键盘与琥珀色点击双层波形、当前 KPS／CPS、LIVE 状态和一次性键帽光点。Growth 入口移到常用键标题行，保留后续独立 3D Keyboard 窗口；没有实现用户提到的 Flappy Bird 未来构想。
+
+新增 `KeyStats/TypingPulseView.swift`，并注册正式 Xcode target、排除根 SwiftPM App-only 源码。`StatsPopoverViewController` 复用可见期间已有的 0.3 秒 KPS timer 调用 `currentRatesSnapshot()`，最多保留 40 个、约 12 秒的聚合速率样本；没有新增 Timer、DisplayLink、全局监听、磁盘持久化或统计 schema。视图不接收键名、原始事件时间戳或输入顺序，样本与光点不进入 Sync／Analytics。
+
+光点由既有聚合统计更新触发，180ms 节流、同时最多 10 个、0.55 秒后移除，不表示具体键身份。路径过渡和光点在 Reduce Motion 下禁用；空闲零样本不持续更新波形，菜单关闭时停止采样并清理样本、光点和动画。其余今日总量、15 键阵列、历史趋势、鼠标明细与底栏保持当前实现。
+
+这是未经视觉和运行验收的实验候选。按用户要求，本轮没有编译、运行测试、启动 App 或宣称性能通过；实现中的 API、布局、生命周期、真实输入反馈、深浅色、三语和能耗均需 Codex 后续检查。未 commit／push。
+
+## 2026-10-28：原生 Helper 独立构建与 c3502 评估
+
+用户恢复了 Helper 整理工作，明确选择“先独立原生模块，评估 c3502”。本轮范围为独立构建／测试边界；菜单视觉仍未通过，继续暂停。上轮正式快照已以 `c46896c` 提交并推送，本轮修改另留本地，未获得新的 commit／push 授权。
+
+`KeyStatsHelper/` 新增独立 SwiftPM manifest、模块说明和 8 项合成事件契约测试，直接编译现有十份 Swift 源码，无第三方依赖或 App 依赖。主 Xcode 的 helper 同步目录显式排除新 manifest、README 和测试文件；根 Package 的 `KeyStatsEventCore` 保留原有源文件并排除新增包元数据。Helper 源码没有搬动或复制，主 App／Helper 的 Bundle ID、Mach service、协议版本、签名、安装路径、XPC 鉴权与单连接限制均沿用现有实现。SwiftPM 输出仅为开发用裸可执行文件，独立安装／授权或 Node 可调用服务尚未实现。
+
+完整边界图与 c3502 源码证据集中在 [KeyStatsHelper/README.md](KeyStatsHelper/README.md)。c3502 接口源码基线为 `e3fcba6b43c9c4c43b311a3439acea0e368cd2e2`；收尾时其他进程已把开始检查前的五份文档改动提交为 `8ae48c8`，确认只改文档、不改变接口结论，本次没有对 c3502 仓库写入。插件声明与同实例通知可复用，但远程 provider 为占位、传输管理器仅注册、WebSocket 服务端未接入监听配置，当前不能替换正式 XPC。未来适合在 StatsManager 之后显式提供粗粒度聚合快照，经本机适配送入客户端插件，避免另写统计引擎；不得把 Helper 原始按键顺序、来源 PID 或移动坐标送入事件总线。
+
+验证：独立包 **8 项 XCTest、0 failures**，主工程 **225 项 XCTest、0 failures**，正式 App Debug **BUILD SUCCEEDED**，pbxproj lint 与 diff 检查通过。主工程首次回归发现 Xcode 对同步目录的排除必须精确到测试文件，现已修正；滚轮测试夹具也已改为真正的合成 scroll event。正式 helper 编译清单确认只有原有十份源码与 Xcode 生成的资源符号文件，没有 Package.swift 或 XCTest。
+
+拆分前后构建使用同一 DerivedData，Helper bundle 文件清单和资源保持一致；主二进制及 Debug dylib 的代码签名区字节发生变化，但 Mach-O 签名区之前的被签名内容完全相同，Helper cdhash 均为 `1c50066a0660745b54a45fe46f53ca82a82a9e4c`。本机开发证书的 strict 签名校验前后都报 `CSSMERR_TP_NOT_TRUSTED`，未尝试修复或重签证书；已有 vendor helper cdhash 校验通过且没有修改 vendor。这是构建边界验证，不能代替 TCC、正式 XPC 或发布签名验收。
+
+本轮未启动 App／Helper、未安装或替换服务、未请求权限或改 LaunchAgent，也未启动 c3502／Node 或新增网络端口；c3502 仅做源码评估，没有端到端接入结果。日志和前后对照保留在 `build/HelperSeparation/`。历史 Prototypes 不整理或删除，未 commit／push。
+
 ## 2026-10-26：开发交接快照，菜单视觉未通过
 
 用户已查看当前菜单并明确反馈“看着还是一团糟”，随后要求暂停开发，并授权 commit、push，交由其他 AI 分析。当前菜单是供分析的实现快照，**未通过视觉验收，不是设计定稿或发布版本**。不要以已有测试、构建或历史局部认可替代本次整体视觉结论，也不要自行继续添加候选或修改界面。

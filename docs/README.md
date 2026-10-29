@@ -12,6 +12,10 @@
 
 ## 当前入口
 
+- [菜单 UI 风格与 Kimi 交接](menu-ui-styles.md) — 原版 Input Pulse 保留，极客风为独立可编辑副本；设置中选择，下次打开菜单生效。
+
+- [原生 Helper 独立包与 c3502 评估](../KeyStatsHelper/README.md) — **Implemented / 构建边界已分离**：原有十份 Swift 源码独立构建与测试，正式安装／签名／XPC 保留；c3502 尚未形成可用远程传输，实际插件对接未实现。
+- [Input Pulse 实验](../PROJECT.md#2026-10-28input-pulse-菜单实验待-codex-验证) — **Experimental / 待验证**：顶部实时 KPS／CPS 双层波形与有界输入光点；仅可见期间采样，内存速率缓冲，关闭清理，旧 3D 菜单资源移除。按用户要求本轮不编译或启动，交由 Codex 验证。
 - [当前开发交接结论](../PROJECT.md#2026-10-26开发交接快照菜单视觉未通过) — **Handoff / 暂停**：当前菜单视觉未通过，用户授权提交并推送供其他 AI 分析；不代表定稿或发布，不自行继续试验。
 - [机械特写与数据阵列](../PROJECT.md#2026-10-26菜单机械特写与五列数据阵列视觉未通过已暂停) — **Implemented / 视觉未通过**：384pt 宽，静态机械局部、五列键位和全宽鼠标短行；不在 Popover 创建 SceneKit／Metal。
 - [PROJECT.md](../PROJECT.md) — **Current**：产品状态、upstream differences 和阶段性决策。

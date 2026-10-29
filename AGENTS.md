@@ -123,6 +123,10 @@ macOS input events
   - 通过 `AnalyticsManager` 发出既有产品事件。
 - `KeyStatsHelper/main.swift`
   - 启动 `HelperXPCListener` 并保持 Helper run loop。
+- `KeyStatsHelper/Package.swift`、`KeyStatsHelper/README.md`、`KeyStatsHelper/Tests/`
+  - 独立、无第三方依赖的原生 Helper SwiftPM 构建／测试入口，直接复用正式十份 Swift 源码。SwiftPM 裸可执行文件不替代签名 `.app` 或既有安装流程，不以 `swift run` 启动已安装的服务。
+  - 新包清单、README 和具体测试文件通过主工程 helper 同步目录例外排除；新增测试必须同步排除其路径，避免 XCTest 进入生产。根 SwiftPM 的 `KeyStatsEventCore` 继续直接编译原有四份事件源码。
+  - c3502 的本地源码评估见 Helper README：当前远程通知／请求与 WebSocket 传输未完成，只能作为未来聚合快照插件的候选。不得把原始按键／移动 payload 接入 c3502，不放宽现有 XPC 鉴权。
 - `KeyStatsHelper/EventTapController.swift`
   - Helper 内唯一正式 `CGEventTap` 所有者。
   - 使用 `.listenOnly` 的 `.cgSessionEventTap` 监听键盘、点击、滚轮和移动事件。
@@ -161,8 +165,11 @@ macOS input events
   - 当前菜单栏视图已经使用 `NSHostingView` 嵌入 SwiftUI，但 shell 仍为 AppKit。
 - `KeyStats/StatsPopoverViewController.swift`
   - AppKit 统计 popover，部分数值/KPS 视图嵌入 SwiftUI。
-  - 当前菜单按用户 2026-10-26 的固定规格实施：384pt 宽、系统 `.popover` 材质，顺序为顶部机械键帽特写入口、今日双列总量、5×3 常用键阵列、96pt 趋势图、全宽鼠标短行及原有底栏，全部统计默认展示。顶部 360×92pt 的 `GrowthKeyboardPopover` 为正式机械网格离线渲染的 12 键局部特写，浅／深色分别布光、各有 1x／2x 透明 PNG；Popover 不创建 SceneKit／Metal，也不额外查询累计历史。入口为原生按钮，hover 图片上移 2pt、箭头前移 2pt，140ms ease-out；移出／关闭立即复位，Reduce Motion 仅改变 CTA 颜色。侧键整行仅有数据时显示；鼠标短标签保留完整 tooltip／AX 名称。底栏继续使用原生 recessed／悬停边框，趋势分段仍为原生控件。用户已否定当前菜单整体视觉，开发暂停；本次按明确授权 commit／push 作为其他 AI 分析的交接快照，不得当作定稿或自行继续尝试；此前双图入口、三列明细、折叠版及大面积键盘草图均为历史候选。
+  - 当前实验菜单保留 384pt 宽、系统 `.popover` 材质、今日双列总量、5×3 常用键阵列、96pt 趋势图、全宽鼠标短行及原有底栏；顶部旧 3D 特写与资源已移除，Growth 改为常用键标题行的轻量文字入口。此前整体视觉未通过，新 Input Pulse 候选不代表这些问题已解决。
   - 只在显示期间订阅统计更新并运行 KPS 刷新 timer。
+- `KeyStats/TypingPulseView.swift`
+  - 顶部 132pt Input Pulse：复用可见期间现有 0.3s KPS timer 读取 `currentRatesSnapshot()`，以双层 CAShapeLayer 波形显示 KPS／CPS；约 12 秒、40 个聚合速率样本只存内存，不接收键名、原始时间戳或输入顺序。
+  - 聚合统计更新可触发有节流、最多 10 个的一次性键帽光点；无新 Timer／DisplayLink／全局监听，空闲零样本不持续更新波形。关闭时停止采样、清空样本并移除光点及动画；Reduce Motion 禁用路径过渡和光点。2026-10-29 已将波形改为直接生成 CGMutablePath，修正 macOS 13 兼容性，Debug 构建与 225 项核心测试通过（核心测试不覆盖该 App-only 视图）；视觉、真实输入和能耗未验收。
 - `KeyStats/KeyboardHeatmapViewController.swift`
   - AppKit 键盘热力图与日期切换；窗口可见时订阅统计更新。
 - `KeyStats/KeyboardVisualizationViewController.swift`、`GrowthKeyboardViewController.swift`
@@ -213,6 +220,10 @@ macOS input events
 - 2026-10-25 用户授权更新来源迁移：`KeyStats/Info.plist` 已指向 `Xuan-lprk/KeyStatsMac` 的 appcast，`SUEnableAutomaticChecks = false`，上游公钥已替换为用户提供的公钥。`KeyStatsInAppUpdatesEnabled = false`，仅配置公钥不启用更新；未明确开启 App 内更新或公钥无效时，`UpdateManager` 初始化、探测和订阅不创建 Sparkle；普通模式的手动入口仅打开自己的 Releases 页面。不得自行生成/导出私钥、启用自动更新或发布；Keychain、CI Secret、签名和首发验收仍需相应授权。
 
 ## UI 技术方向
+
+- 极客主题已从初始副本演进为单独候选，代码保留，视觉及完整正式运行未验收。2026-10-29 隔离启动崩溃已定位为 loadView 设置 appearance 时同步回调递归访问 view；GeekStatsPopoverViewController.updateAppearance 必须在 isViewLoaded 且控件已创建后执行。中英文隔离预览复测、Debug 构建及 225 项核心测试通过，不能替代正式风格切换和真实输入验收。
+
+- 菜单两套风格在 Settings 的「菜单 UI 风格」选择，`menuUIStyle.v1` 默认 standard、另一项 geek，下次打开菜单生效。保留 `StatsPopoverViewController`／`TypingPulseView` 原版；用户明确要求的独立副本为 `GeekStatsPopoverViewController`／`GeekTypingPulseView`，供 Kimi 改第二套，当前两套外观相同。修改边界见 `docs/menu-ui-styles.md`；不把副本存在视为新设计已通过。MenuBarController 每套最多缓存一个控制器，隐藏期间按原生命周期停止更新。
 
 当前 UI 以 AppKit 为主，并已有少量 SwiftUI 嵌入。未来可逐页迁移用户可见页面，例如：
 
@@ -327,6 +338,7 @@ xcodebuild \
 
 - `Package.swift` 定义 `KeyStatsCore`、`KeyStatsEventCore`、本地 PostHog 测试替身和 `KeyStatsCoreTests`；SwiftPM 不使用正式 PostHog SDK 发送数据。
 - `KeyStatsTests/` 当前覆盖模型、App attribution、Analytics consent、`StatsManager` 的本地持久化/导入/合并/历史、同步核心和更新检查协调逻辑。
+- 2026-10-28 原生 Helper 分离检查在 `build/HelperSeparation/`：独立包 8 项 XCTest、根工程 225 项 XCTest 和正式 Debug 构建通过。Helper 十份运行源码与主 App 安装／权限链未改，重建前后 Helper cdhash 与两个 Mach-O 的被签名内容相同，Debug 签名区字节有差异；本机开发证书的 strict 校验在前后均报 `CSSMERR_TP_NOT_TRUSTED`。vendor helper 校验通过且未更新；没有启动、安装、重新授权或进行 c3502 端到端测试，不能据此宣称 TCC 或发布签名验收通过。
 - 最新菜单特写与阵列布局检查在 `build/MenuBarCloseup/`：225 项 XCTest、Debug 构建、三语资源 lint 通过；同源隔离原生检查覆盖三语、深浅色、15／2／空键位及侧键行，完整有侧键为 384×626pt、无侧键为 384×606pt、2 键／空数据为 384×532pt，鼠标短标签无截断。静态图透明通道、1x／2x 尺寸与独立深浅色渲染检查通过；原生按钮鼠标跟踪、键盘动作、图表切换和关闭清理通过。Hover／Reduce Motion 使用隔离分支注入，不能替代正式桌面的真实悬停、完整 VoiceOver 和能耗验收；用户已否定整体视觉，当前仅保留分析快照。
 - 旧双图入口验证在 `build/KimiMenuVerification/`：225 项 XCTest、Debug 构建、资源 lint、三语同源隔离原生检查通过。该阶段英文紧凑长标签省略已由当前短行布局替代，旧记录不代表当前界面。
 - 菜单控件减轻检查在 `build/MenuBarControls/`：225 项 XCTest、Debug 构建、英文浅色与中文深色的同源隔离原生检查通过，完整示例尺寸仍为 380 × 691 点；真实悬停／焦点及用户视觉验收未完成。

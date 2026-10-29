@@ -11,7 +11,7 @@ let package = Package(
         .target(
             name: "KeyStatsEventCore",
             path: "KeyStatsHelper",
-            exclude: ["Assets.xcassets", "Info.plist", "KeyStatsHelper.entitlements", "main.swift",
+            exclude: ["Package.swift", "README.md", "Tests", "Assets.xcassets", "Info.plist", "KeyStatsHelper.entitlements", "main.swift",
                       "EventTapController.swift", "HelperXPCListener.swift", "HelperIdleSupervisor.swift",
                       "HelperLocations.swift", "HelperProtocols.swift"],
             sources: ["SystemMediaKey.swift", "PayloadBuilder.swift", "HelperPayloadFields.swift", "ButtonRoleClassifier.swift"]
@@ -63,6 +63,10 @@ let package = Package(
                 "UpdateManager.swift",
                 "KeyboardHeatmapWindowController.swift",
                 "StatsPopoverViewController.swift",
+                "TypingPulseView.swift",
+                "GeekTypingPulseView.swift",
+                "GeekStatsPopoverViewController.swift",
+                "MenuUIStyle.swift",
                 "SettingsWindowController.swift",
                 "MainWindowViewController.swift"
             ],

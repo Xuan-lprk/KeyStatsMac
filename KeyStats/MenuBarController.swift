@@ -13,6 +13,8 @@ class MenuBarController {
     private var statusView: MenuBarStatusView?
     private var contextMenu: NSMenu?
     private var popover: NSPopover!
+    private var popoverStyle: MenuUIStyle = .standard
+    private var styleControllers: [String: NSViewController] = [:]
     private var eventMonitor: Any?
     private let dynamicIconColorStyleKey = "dynamicIconColorStyle"
     private let menuBarUpdateInterval: TimeInterval = 0.1
@@ -92,11 +94,16 @@ class MenuBarController {
         popover = NSPopover()
         popover.behavior = .transient
         popover.animates = true
-        let statsPopoverViewController = StatsPopoverViewController()
-        statsPopoverViewController.preferredSizeDidChange = { [weak self] targetSize in
-            self?.popover.contentSize = targetSize
+        popoverStyle = MenuUIStyle.current
+        let controller = styleControllers[popoverStyle.rawValue] ?? (popoverStyle == .geek
+            ? GeekStatsPopoverViewController() : StatsPopoverViewController())
+        styleControllers[popoverStyle.rawValue] = controller
+        let statsPopoverViewController = controller as! MenuStatsPresenting
+        statsPopoverViewController.preferredSizeDidChange = { [weak self, weak controller] targetSize in
+            guard let self, let controller, self.popover.contentViewController === controller else { return }
+            self.popover.contentSize = targetSize
         }
-        popover.contentViewController = statsPopoverViewController
+        popover.contentViewController = controller
         statsPopoverViewController.prepareForPopoverPresentation()
         popover.contentSize = statsPopoverViewController.preferredContentSize
     }
@@ -142,10 +149,11 @@ class MenuBarController {
     }
 
     private func showPopover() {
+        if popoverStyle != MenuUIStyle.current { setupPopover() }
         // 先激活应用，确保弹窗可以接收焦点
         NSApp.activate(ignoringOtherApps: true)
 
-        if let statsPopoverViewController = popover.contentViewController as? StatsPopoverViewController {
+        if let statsPopoverViewController = popover.contentViewController as? MenuStatsPresenting {
             statsPopoverViewController.prepareForPopoverPresentation()
             popover.contentSize = statsPopoverViewController.preferredContentSize
         }

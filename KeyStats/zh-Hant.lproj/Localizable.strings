@@ -494,8 +494,6 @@
 "popover.hideKeys" = "收起";
 
 "popover.growthKeyboard" = "成長鍵盤";
-"popover.growthKeyboardSubtitle" = "薄膜 · 機械";
-"popover.growthKeyboardCTA" = "成長與回放";
 "popover.mouse.left" = "左鍵";
 "popover.mouse.middle" = "中鍵";
 "popover.mouse.right" = "右鍵";
@@ -504,3 +502,26 @@
 "popover.mouse.movement" = "移動";
 "popover.mouse.scroll" = "捲動";
 "popover.growthKeyboardHint" = "打開可互動的 3D 成長鍵盤";
+
+/* 即時輸入節奏 */
+"pulse.title" = "輸入節奏";
+"pulse.live" = "即時";
+"pulse.idleHint" = "敲幾下，點亮節奏";
+"pulse.activeHint" = "每一次敲擊，都有迴響";
+"pulse.accessibilityHelp" = "即時顯示聚合後的鍵盤與滑鼠速率，不顯示鍵名或輸入順序。";
+"pulse.accessibilityValue" = "目前速率：鍵盤 %1$.1f KPS，點擊 %2$.1f CPS";
+
+/* 極客選單主題 */
+"geek.today" = "今日";
+"geek.topKeys" = "常用鍵位";
+"geek.history" = "歷史趨勢";
+"geek.pulse.title" = "輸入 // 節奏";
+"geek.pulse.live" = "線上";
+"geek.pulse.idleHint" = "等待輸入_";
+"geek.pulse.activeHint" = "訊號鎖定 // 繼續敲擊";
+"geek.pulse.accessibilityHelp" = "極客控制台即時顯示聚合後的鍵盤與滑鼠速率，不顯示鍵名或輸入順序。";
+"geek.pulse.accessibilityValue" = "目前速率：鍵盤 %1$.1f KPS，點擊 %2$.1f CPS";
+
+"settings.uiStyle" = "選單 UI 風格";
+"settings.uiStyle.standard" = "Input Pulse（原版）";
+"settings.uiStyle.geek" = "極客風（獨立副本）";
