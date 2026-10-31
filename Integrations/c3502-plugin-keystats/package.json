@@ -1,0 +1,24 @@
+{
+  "name": "@keystats/c3502-plugin-input",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    "./client": {
+      "types": "./dist/client.d.mts",
+      "import": "./dist/client.mjs"
+    }
+  },
+  "scripts": {
+    "build": "vp pack",
+    "test": "vp test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "peerDependencies": {
+    "c3502": "*"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}
